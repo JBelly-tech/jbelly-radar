@@ -174,10 +174,10 @@
       "label": "VentureBeat · AI",
       "kind": "rss",
       "category": "news",
-      "enabled": true,
+      "enabled": false,
       "url": "https://venturebeat.com/category/ai/feed/",
       "maxItems": 15,
-      "$note": "Rate-limits aggressively (HTTP 429). A failed fetch is reported, never fatal.",
+      "$note": "Off by default: returns HTTP 429 on every request from a residential IP. Set enabled to true to try it from a network it accepts.",
       "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
     },
     {

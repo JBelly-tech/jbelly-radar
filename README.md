@@ -105,7 +105,7 @@ sorted by it.
 | **skill** | the agent-skills leaderboard, plus GitHub repositories tagged `claude-skill` and `agent-skills` created in the last 120 / 180 days |
 | **repo** | new `mcp-server` repositories, rising `ai` repositories, actively pushed agent frameworks |
 | **discussion** | Hacker News on AI agents, coding agents, vibe coding and Claude Code, above a per-topic point threshold |
-| **news** | Forbes Innovation, TechCrunch AI, WIRED AI, The Verge AI, Ars Technica, VentureBeat AI, Hugging Face, MIT News |
+| **news** | Forbes Innovation, TechCrunch AI, WIRED AI, The Verge AI, Ars Technica, Hugging Face, MIT News — plus VentureBeat AI, shipped disabled because it answers 429 to every request from a residential IP |
 | **research** | arXiv `cs.AI`, newest first |
 
 A failed source is reported in the sidebar and never fails the run.
