@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test suite (parser, config, tokens, page structure)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\check.ps1
+
+      - name: PSScriptAnalyzer
+        shell: powershell
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
+          Write-Host "PSScriptAnalyzer: no errors"
+
+  # Sources are public and can rate-limit or go down; this job reports, it does
+  # not gate. It exists so a silently dead source is noticed.
+  sources:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Live sync
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sync.ps1
+
+      - name: Report source health
+        shell: powershell
+        run: |
+          $d = Get-Content -Raw -Encoding UTF8 data\trends.json | ConvertFrom-Json
+          $d.sources | Select-Object id, status, count, ms | Format-Table -AutoSize | Out-String | Write-Host
+          $failed = @($d.sources | Where-Object { $_.status -ne 'ok' })
+          Write-Host ("{0} items, {1} source(s) not ok" -f $d.counts.total, $failed.Count)

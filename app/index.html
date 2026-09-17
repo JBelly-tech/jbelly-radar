@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JBelly Radar</title>
+<meta name="description" content="Local trend radar over agent skills, repositories, news and research.">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='%23e0a33c' stroke-width='2'/><circle cx='12' cy='12' r='3' fill='%23e0a33c'/></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#feed" data-i18n="skip">Skip to results</a>
+
+<div class="shell">
+
+  <!-- ── sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar__brand">
+      <span class="sidebar__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      </span>
+      <span>
+        <span class="sidebar__name">JBelly Radar</span>
+        <span class="sidebar__tag" data-i18n="tagline">trend radar</span>
+      </span>
+      <button class="btn btn--ghost btn--icon sidebar__close" id="sidebarClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="sidebar__scroll">
+      <p class="sidebar__label" data-i18n="signals">Signals</p>
+      <nav class="nav" id="catNav" aria-label="Categories"></nav>
+
+      <p class="sidebar__label" data-i18n="sourceHealth">Source health</p>
+      <div class="health" id="healthList"></div>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- ── main ────────────────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <header class="header">
+      <button class="btn btn--ghost btn--icon hide-lg" id="menuBtn" aria-label="Open menu" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+
+      <label class="search">
+        <span class="sr-only" data-i18n="searchLabel">Search signals</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="input" id="q" type="search" autocomplete="off" placeholder="Search title, source, tag…" data-i18n-ph="searchPh">
+        <kbd>Ctrl K</kbd>
+      </label>
+
+      <select class="select hide-sm" id="range" aria-label="Time range">
+        <option value="1" data-i18n="r24">Last 24 hours</option>
+        <option value="7" data-i18n="r7">Last 7 days</option>
+        <option value="30" selected data-i18n="r30">Last 30 days</option>
+        <option value="0" data-i18n="rAll">All time</option>
+      </select>
+
+      <select class="select hide-sm" id="sort" aria-label="Sort by">
+        <option value="heat" data-i18n="sHeat">Sort: heat</option>
+        <option value="new" data-i18n="sNew">Sort: newest</option>
+        <option value="momentum" data-i18n="sMom">Sort: momentum</option>
+        <option value="metric" data-i18n="sMetric">Sort: popularity</option>
+      </select>
+
+      <button class="btn btn--ghost btn--icon" id="langBtn" aria-label="Switch language" title="العربية">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      </button>
+
+      <button class="btn btn--ghost btn--icon" id="themeBtn" aria-label="Switch theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+
+      <button class="btn btn--primary" id="refreshBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+        <span data-i18n="refresh">Refresh</span>
+      </button>
+    </header>
+
+    <main class="page" id="main">
+
+      <div class="toolbar">
+        <div>
+          <h1 data-i18n="title">Trend radar</h1>
+          <p id="subtitle">—</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="badge badge--outline" id="filterChip" hidden></span>
+        </div>
+      </div>
+
+      <section class="grid-kpi" id="kpis" aria-label="Summary"></section>
+
+      <div class="grid-main">
+
+        <section class="card" aria-labelledby="feedTitle">
+          <div class="card__header">
+            <h2 class="card__title" id="feedTitle" data-i18n="feed">Signals</h2>
+            <span class="badge badge--outline" id="feedCount">0</span>
+          </div>
+          <div class="card__body card__body--flush">
+            <div class="feed" id="feed"></div>
+          </div>
+        </section>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <section class="card" aria-labelledby="moversTitle">
+            <div class="card__header">
+              <h2 class="card__title" id="moversTitle" data-i18n="movers">Top movers</h2>
+              <span class="badge badge--primary" data-i18n="weekly">weekly</span>
+            </div>
+            <div class="card__body card__body--flush">
+              <div class="movers" id="movers"></div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="mixTitle">
+            <div class="card__header">
+              <h2 class="card__title" id="mixTitle" data-i18n="mix">Signal mix</h2>
+            </div>
+            <div class="card__body">
+              <div class="bars" id="mix"></div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="../data/trends.js" onerror="window.RADAR_BOOT_FAILED=1"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "$comment": "Add a source = add an object here. No code change as long as 'kind' is one of: skills-sh | github-search | hn | rss. See README.md > Adding a source.",
+  "defaults": {
+    "timeoutSec": 30,
+    "maxItems": 25,
+    "userAgent": "jbelly-radar/1.0 (local research dashboard)",
+    "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change."
+  },
+  "sources": [
+    {
+      "id": "skills-sh",
+      "label": "skills.sh leaderboard",
+      "kind": "skills-sh",
+      "category": "skill",
+      "enabled": true,
+      "url": "https://www.skills.sh/",
+      "maxItems": 120,
+      "weeklyOrder": "newest-first"
+    },
+    {
+      "id": "gh-claude-skills",
+      "label": "GitHub · new skill repos",
+      "kind": "github-search",
+      "category": "skill",
+      "enabled": true,
+      "query": "topic:claude-skill",
+      "createdWithinDays": 120,
+      "sort": "stars",
+      "maxItems": 20
+    },
+    {
+      "id": "gh-agent-skills",
+      "label": "GitHub · agent-skills topic",
+      "kind": "github-search",
+      "category": "skill",
+      "enabled": true,
+      "query": "topic:agent-skills",
+      "createdWithinDays": 180,
+      "sort": "stars",
+      "maxItems": 15
+    },
+    {
+      "id": "gh-mcp-servers",
+      "label": "GitHub · new MCP servers",
+      "kind": "github-search",
+      "category": "repo",
+      "enabled": true,
+      "query": "topic:mcp-server",
+      "createdWithinDays": 60,
+      "sort": "stars",
+      "maxItems": 20
+    },
+    {
+      "id": "gh-ai-rising",
+      "label": "GitHub · rising AI repos",
+      "kind": "github-search",
+      "category": "repo",
+      "enabled": true,
+      "query": "topic:ai stars:>150",
+      "createdWithinDays": 90,
+      "sort": "stars",
+      "maxItems": 25
+    },
+    {
+      "id": "gh-agent-frameworks",
+      "label": "GitHub · agent frameworks",
+      "kind": "github-search",
+      "category": "repo",
+      "enabled": true,
+      "query": "\"ai agent\" in:name,description stars:>300",
+      "pushedWithinDays": 21,
+      "sort": "updated",
+      "maxItems": 20
+    },
+    {
+      "id": "hn-ai-agents",
+      "label": "Hacker News · AI agents",
+      "kind": "hn",
+      "category": "discussion",
+      "enabled": true,
+      "query": "AI agent",
+      "minPoints": 80,
+      "withinDays": 21,
+      "maxItems": 20
+    },
+    {
+      "id": "hn-vibe-coding",
+      "label": "Hacker News · vibe coding",
+      "kind": "hn",
+      "category": "discussion",
+      "enabled": true,
+      "query": "vibe coding",
+      "minPoints": 40,
+      "withinDays": 45,
+      "maxItems": 20
+    },
+    {
+      "id": "hn-coding-agents",
+      "label": "Hacker News · coding agents",
+      "kind": "hn",
+      "category": "discussion",
+      "enabled": true,
+      "query": "coding agent",
+      "minPoints": 60,
+      "withinDays": 30,
+      "maxItems": 20
+    },
+    {
+      "id": "hn-claude-code",
+      "label": "Hacker News · Claude Code",
+      "kind": "hn",
+      "category": "discussion",
+      "enabled": true,
+      "query": "claude code",
+      "minPoints": 40,
+      "withinDays": 45,
+      "maxItems": 15
+    },
+    {
+      "id": "forbes-innovation",
+      "label": "Forbes · Innovation",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://www.forbes.com/innovation/feed2/",
+      "maxItems": 20,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)",
+      "requireMatch": "(?i)\\b(ai|a\\.i\\.|artificial intelligence|llm|llms|agent|agents|agentic|openai|anthropic|claude|gemini|copilot|chatgpt|model|models|robot|robotics|chip|chips|nvidia|gpu|data cent|machine learning|neural|automation|developer|software|startup|cloud|quantum|coding)\\b"
+    },
+    {
+      "id": "techcrunch-ai",
+      "label": "TechCrunch · AI",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "maxItems": 20,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "verge-ai",
+      "label": "The Verge · AI",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "maxItems": 15,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "arstechnica-tech",
+      "label": "Ars Technica · Technology",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+      "maxItems": 15,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)",
+      "requireMatch": "(?i)\\b(ai|a\\.i\\.|artificial intelligence|llm|llms|agent|agents|agentic|openai|anthropic|claude|gemini|copilot|chatgpt|model|models|robot|robotics|chip|chips|nvidia|gpu|data cent|machine learning|neural|automation|developer|software|startup|cloud|quantum|coding)\\b"
+    },
+    {
+      "id": "wired-ai",
+      "label": "WIRED · AI",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://www.wired.com/feed/tag/ai/latest/rss",
+      "maxItems": 15,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "venturebeat-ai",
+      "label": "VentureBeat · AI",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://venturebeat.com/category/ai/feed/",
+      "maxItems": 15,
+      "$note": "Rate-limits aggressively (HTTP 429). A failed fetch is reported, never fatal.",
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "huggingface-blog",
+      "label": "Hugging Face · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://huggingface.co/blog/feed.xml",
+      "maxItems": 15,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "mit-news-ai",
+      "label": "MIT News · AI",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+      "maxItems": 15,
+      "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)"
+    },
+    {
+      "id": "arxiv-cs-ai",
+      "label": "arXiv · cs.AI",
+      "kind": "rss",
+      "category": "research",
+      "enabled": true,
+      "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=20",
+      "maxItems": 20
+    }
+  ],
+  "heat": {
+    "$comment": "Deterministic ranking, no model call. halfLifeDays: how fast an item cools. metricCeiling: the value that counts as saturated popularity. minBaselineHours: a metric baseline is only replaced once it is this old, so momentum is never invented from two syncs minutes apart.",
+    "weights": {
+      "recency": 0.4,
+      "popularity": 0.35,
+      "momentum": 0.25
+    },
+    "categories": {
+      "skill": {
+        "halfLifeDays": 14,
+        "metricCeiling": 500000
+      },
+      "repo": {
+        "halfLifeDays": 21,
+        "metricCeiling": 20000
+      },
+      "news": {
+        "halfLifeDays": 3,
+        "metricCeiling": 1
+      },
+      "discussion": {
+        "halfLifeDays": 5,
+        "metricCeiling": 800
+      },
+      "research": {
+        "halfLifeDays": 7,
+        "metricCeiling": 1
+      }
+    },
+    "minBaselineHours": 12
+  }
+}
