@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>JBelly Radar</title>
-<meta name="description" content="Local trend radar over agent skills, repositories, news and research.">
+<meta name="description" content="Local trend radar over agent skills, repositories, releases, news and research — ranked, personalised, live.">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="radar.css">
+<!-- the favicon is a data: URI and cannot reference a token; its amber is --primary -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='none' stroke='%23e0a33c' stroke-width='2'/><circle cx='12' cy='12' r='3' fill='%23e0a33c'/></svg>">
 </head>
 <body>
@@ -34,6 +36,9 @@
       <p class="sidebar__label" data-i18n="signals">Signals</p>
       <nav class="nav" id="catNav" aria-label="Categories"></nav>
 
+      <p class="sidebar__label" data-i18n="tech">Technology</p>
+      <div class="chips" id="techChips" role="group" aria-label="Technology filters"></div>
+
       <p class="sidebar__label" data-i18n="sourceHealth">Source health</p>
       <div class="health" id="healthList"></div>
     </div>
@@ -44,7 +49,7 @@
   <div class="main">
 
     <header class="header">
-      <button class="btn btn--ghost btn--icon hide-lg" id="menuBtn" aria-label="Open menu" style="display:none">
+      <button class="btn btn--ghost btn--icon" id="menuBtn" aria-label="Open menu" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
 
@@ -55,6 +60,11 @@
         <kbd>Ctrl K</kbd>
       </label>
 
+      <div class="pill" id="modeToggle" role="tablist" aria-label="Feed mode">
+        <button class="pill__tab" role="tab" data-mode="foryou" aria-selected="false" data-i18n="forYou">For you</button>
+        <button class="pill__tab" role="tab" data-mode="all" aria-selected="true" data-i18n="everything">Everything</button>
+      </div>
+
       <select class="select hide-sm" id="range" aria-label="Time range">
         <option value="1" data-i18n="r24">Last 24 hours</option>
         <option value="7" data-i18n="r7">Last 7 days</option>
@@ -63,11 +73,16 @@
       </select>
 
       <select class="select hide-sm" id="sort" aria-label="Sort by">
-        <option value="heat" data-i18n="sHeat">Sort: heat</option>
+        <option value="auto" data-i18n="sHeat">Sort: heat</option>
         <option value="new" data-i18n="sNew">Sort: newest</option>
         <option value="momentum" data-i18n="sMom">Sort: momentum</option>
         <option value="metric" data-i18n="sMetric">Sort: popularity</option>
       </select>
+
+      <button class="btn btn--outline" id="profileBtn" aria-haspopup="dialog" aria-controls="profileDrawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        <span class="hide-sm" data-i18n="profileTitle">Tune your radar</span>
+      </button>
 
       <button class="btn btn--ghost btn--icon" id="langBtn" aria-label="Switch language" title="العربية">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
@@ -83,6 +98,13 @@
       </button>
     </header>
 
+    <div class="livebar" id="livebar" aria-live="polite">
+      <span class="livebar__dot" aria-hidden="true"></span>
+      <span class="livebar__text" id="liveText">—</span>
+      <span class="livebar__track" id="liveTrack" hidden><span class="livebar__fill" id="liveFill" style="width:0%"></span></span>
+      <span class="livebar__right" id="liveRight"></span>
+    </div>
+
     <main class="page" id="main">
 
       <div class="toolbar">
@@ -90,12 +112,28 @@
           <h1 data-i18n="title">Trend radar</h1>
           <p id="subtitle">—</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="badge badge--outline" id="filterChip" hidden></span>
-        </div>
+        <div class="chips" id="activeChips"></div>
       </div>
 
-      <section class="grid-kpi" id="kpis" aria-label="Summary"></section>
+      <div class="grid-top">
+        <section class="card" aria-labelledby="scopeTitle">
+          <div class="card__header">
+            <h2 class="card__title" id="scopeTitle" data-i18n="scope">Radar scope</h2>
+            <span class="badge badge--outline" id="scopeCount">—</span>
+          </div>
+          <div class="scope-card__body"><div id="scope"></div></div>
+          <div class="scope-legend" id="scopeLegend"></div>
+        </section>
+        <div class="kpi-stack" id="kpis" aria-label="Summary"></div>
+      </div>
+
+      <section class="card" id="notableCard" aria-labelledby="notableTitle" style="margin-bottom:16px">
+        <div class="card__header">
+          <h2 class="card__title" id="notableTitle" data-i18n="notable">From notable organizations</h2>
+          <span class="badge badge--outline" id="notableCount">0</span>
+        </div>
+        <div class="rail" id="rail"></div>
+      </section>
 
       <div class="grid-main">
 
@@ -110,6 +148,13 @@
         </section>
 
         <div style="display:flex;flex-direction:column;gap:16px">
+          <section class="card" id="adviceCard" aria-labelledby="adviceTitle">
+            <div class="card__header">
+              <h2 class="card__title" id="adviceTitle">—</h2>
+            </div>
+            <div class="advice" id="advice"></div>
+          </section>
+
           <section class="card" aria-labelledby="moversTitle">
             <div class="card__header">
               <h2 class="card__title" id="moversTitle" data-i18n="movers">Top movers</h2>
@@ -117,6 +162,16 @@
             </div>
             <div class="card__body card__body--flush">
               <div class="movers" id="movers"></div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="savedTitle">
+            <div class="card__header">
+              <h2 class="card__title" id="savedTitle" data-i18n="saved">Saved</h2>
+              <span class="badge badge--outline" id="savedCount">0</span>
+            </div>
+            <div class="card__body card__body--flush">
+              <div class="movers" id="savedList"></div>
             </div>
           </section>
 
@@ -135,9 +190,43 @@
   </div>
 </div>
 
+<!-- ── profile drawer ─────────────────────────────────────────────────────── -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="profileDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
+  <div class="drawer__head">
+    <h2 id="drawerTitle" data-i18n="profileTitle">Tune your radar</h2>
+    <button class="btn btn--ghost btn--icon" id="drawerClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer__body">
+    <div>
+      <span class="field__label" data-i18n="profileBusiness">Your business</span>
+      <div class="chips" id="profileVerticals" role="group"></div>
+    </div>
+    <div>
+      <span class="field__label" data-i18n="profileTech">Technologies you follow</span>
+      <div class="chips" id="profileTech" role="group"></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="profileOrgs"><span data-i18n="profileOrgs">Only notable organizations</span></label>
+  </div>
+  <div class="drawer__foot">
+    <button class="btn btn--ghost" id="profileSkip" data-i18n="profileSkip">Skip for now</button>
+    <button class="btn btn--outline" id="profileApply" data-i18n="profileSave">Apply</button>
+  </div>
+</aside>
+
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
-<script src="../data/trends.js" onerror="window.RADAR_BOOT_FAILED=1"></script>
-<script src="app.js"></script>
+<script src="../data/taxonomy.js"></script>
+<script src="../data/trends.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/store.js"></script>
+<script src="js/rank.js"></script>
+<script src="js/live.js"></script>
+<script src="js/scope.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

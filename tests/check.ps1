@@ -142,7 +142,7 @@ else {
 # ── 3. tokens: no raw colour outside tokens.css ───────────────────────────────
 
 $rawColour = '(#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\()'
-foreach ($f in Get-ChildItem -Path (Join-Path $root 'app') -File) {
+foreach ($f in Get-ChildItem -Path (Join-Path $root 'app') -Recurse -File) {
     if ($f.Name -eq 'tokens.css') { continue }
     $checks++
     $n = 0
@@ -196,7 +196,7 @@ else {
 
 $checks++
 $ignore = Read-Utf8 (Join-Path $root '.gitignore')
-foreach ($p in 'data/trends.json', 'data/trends.js', 'data/history/') {
+foreach ($p in 'data/trends.json', 'data/trends.js', 'data/history/', 'data/status.json') {
     if ($ignore -notmatch [regex]::Escape($p)) { $fail.Add("$p must be listed in .gitignore -- generated data is never committed") }
 }
 

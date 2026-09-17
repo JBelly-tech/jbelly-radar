@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>harness · rank.js</title>
+<link rel="stylesheet" href="../../app/tokens.css">
+<style>body{font:14px var(--font-mono);background:var(--background);color:var(--foreground);padding:1rem}</style>
+</head>
+<body>
+<h1>rank.js</h1>
+<pre id="out"></pre>
+<script src="../../app/js/rank.js"></script>
+<script>
+(function () {
+  'use strict';
+  var out = document.getElementById('out');
+  var pass = 0, total = 0;
+  function log(line) { out.textContent += line + '\n'; }
+  function ok(name, cond, detail) {
+    total++;
+    if (cond) { pass++; log('PASS ' + name); }
+    else log('FAIL ' + name + ': ' + (detail || ''));
+  }
+  function near(a, b) { return Math.abs(a - b) < 1e-9; }
+  function ids(arr) { return arr.map(function (i) { return i.id; }).join(','); }
+
+  var rank = window.Radar && window.Radar.rank;
+  ok('module attached', !!rank && typeof rank.score === 'function' && typeof rank.order === 'function' && typeof rank.reputationOf === 'function');
+
+  var taxonomy = {
+    technologies: [
+      { tag: 'mcp', label: 'MCP', keywords: ['mcp'] },
+      { tag: 'agents', label: 'Agents', keywords: ['agent'] },
+      { tag: 'typescript', label: 'TypeScript', keywords: ['typescript'] },
+      { tag: 'rust', label: 'Rust', keywords: ['rust'] },
+      { tag: 'vision', label: 'Vision', keywords: ['vision'] }
+    ],
+    verticals: [
+      { id: 'ecommerce', label: 'E-commerce', keywords: ['shop'], technologies_that_matter: [{ tag: 'agents', why: 'support bots' }, { tag: 'vision', why: 'product photos' }] },
+      { id: 'fintech', label: 'Fintech', keywords: ['bank'], technologies_that_matter: [{ tag: 'rust', why: 'safety' }] }
+    ]
+  };
+
+  var items = [
+    { id: 'A', sourceId: 'hn', sourceLabel: 'Hacker News', heat: 60, ageDays: 1, tech: ['mcp', 'agents'], tags: ['hn'], publisher: { key: 'cloudflare', name: 'Cloudflare', tier: 1, verified: true } },
+    { id: 'B', sourceId: 'gh', sourceLabel: 'GitHub', heat: 60, ageDays: 2, tech: ['mcp'], tags: [], publisher: null },
+    { id: 'C', sourceId: 'gh', sourceLabel: 'GitHub', heat: 95, ageDays: 0.5, tech: ['rust'], tags: ['rust'] },
+    { id: 'D', sourceId: 'blog', sourceLabel: 'Vendor blog', heat: 40, ageDays: 3, tech: ['vision'], tags: ['cv'], publisher: { key: 'acme', name: 'Acme', tier: 2, verified: false } },
+    { id: 'E', heat: 50 },
+    { id: 'F', sourceId: 'gh', sourceLabel: 'GitHub', heat: 70, ageDays: null, tech: ['typescript'], tags: ['ts'], publisher: { key: 'x', name: 'X Org', tier: null, verified: true } }
+  ];
+  var byId = {};
+  items.forEach(function (i) { byId[i.id] = i; });
+
+  var profile = { verticals: ['ecommerce'], tech: ['mcp', 'agents'], orgsOnly: false };
+  var affinity = { tag: { mcp: 2, rust: -1 }, source: { hn: 3 } };
+  var foryou = { mode: 'foryou', profile: profile, affinity: affinity, taxonomy: taxonomy };
+  var all = { mode: 'all', profile: profile, affinity: affinity, taxonomy: taxonomy };
+
+  // reputationOf
+  ok('reputation tier 1', rank.reputationOf({ publisher: { tier: 1 } }) === 1);
+  ok('reputation tier 2', rank.reputationOf({ publisher: { tier: 2 } }) === 0.75);
+  ok('reputation tier 3', rank.reputationOf({ publisher: { tier: 3 } }) === 0.5);
+  ok('reputation string tier', rank.reputationOf({ publisher: { tier: '1' } }) === 1);
+  ok('reputation verified only', rank.reputationOf({ publisher: { verified: true } }) === 0.35);
+  ok('reputation unverified no tier', rank.reputationOf({ publisher: { verified: false } }) === 0);
+  ok('reputation null publisher', rank.reputationOf({ publisher: null }) === 0);
+  ok('reputation missing publisher (v1 item)', rank.reputationOf({ heat: 50 }) === 0);
+  ok('reputation null item', rank.reputationOf(null) === 0);
+
+  // mode all
+  var allOk = items.every(function (it) { return rank.score(it, all).score === it.heat / 100; });
+  ok('all mode: score is heat/100 exactly', allOk);
+  var sA = rank.score(byId.A, all);
+  ok('all mode: why is empty', Array.isArray(sA.why) && sA.why.length === 0);
+  ok('all mode: parts still carry reputation', sA.parts.reputation === 1 && sA.parts.relevance > 0);
+  ok('all mode: order by heat, ties by age asc', ids(rank.order(items, all)) === 'C,F,A,B,E,D', ids(rank.order(items, all)));
+
+  // for-you
+  var fy = rank.order(items, foryou);
+  ok('foryou: tier-1 matching item outranks hotter off-profile item', fy[0].id === 'A' && rank.order(items, all)[0].id === 'C', ids(fy));
+  ok('foryou: order is deterministic across calls', ids(rank.order(items, foryou)) === ids(fy));
+  ok('order does not filter (hidden is a ui concern)', fy.length === items.length);
+  ok('order does not mutate input', items[0].id === 'A' && items[2].id === 'C');
+  ok('order returns a new array', fy !== items);
+
+  var a = rank.score(byId.A, foryou);
+  ok('score in 0..1', items.every(function (it) { var s = rank.score(it, foryou).score; return s >= 0 && s <= 1; }));
+  ok('parts shape', ['heat', 'reputation', 'relevance', 'affinity', 'explore'].every(function (k) { return typeof a.parts[k] === 'number'; }));
+  // profile weights: mcp 1, agents max(0.5 chip, 1 vertical) = 1, vision 0.5 -> total 2.5; A hits 2
+  ok('relevance weighted by position', near(a.parts.relevance, 0.8), String(a.parts.relevance));
+  var d = rank.score(byId.D, foryou);
+  ok('vertical tech counts toward relevance', near(d.parts.relevance, 0.2), String(d.parts.relevance));
+  // affinity A: mcp 2 + source 3 = 5 -> 0.5 + tanh(5/3)/2
+  ok('affinity squash tanh(x/3)', near(a.parts.affinity, 0.5 + Math.tanh(5 / 3) / 2), String(a.parts.affinity));
+  ok('affinity neutral 0.5 without signals', rank.score(byId.E, foryou).parts.affinity === 0.5);
+  var expected = 0.45 * 0.6 + 0.2 * 1 + 0.2 * 0.8 + 0.15 * a.parts.affinity;
+  ok('foryou: score equals the contract formula', near(a.score, expected), a.score + ' vs ' + expected);
+
+  // why
+  function find(why, key) { return why.filter(function (w) { return w.key === key; })[0]; }
+  var pub = find(a.why, 'publisher');
+  ok('why: publisher entry', !!pub && pub.value === 'Cloudflare' && pub.tier === 1, JSON.stringify(a.why));
+  var m = find(a.why, 'matches');
+  ok('why: matches entry lists matched tech', !!m && m.value.indexOf('mcp') !== -1 && m.value.indexOf('agents') !== -1, JSON.stringify(m));
+  var src = find(a.why, 'source-affinity');
+  ok('why: source-affinity entry', !!src && src.value === 'Hacker News', JSON.stringify(src));
+  ok('why: no explore for a known area', !find(a.why, 'explore'));
+  var fv = rank.score(byId.F, foryou);
+  ok('why: verified-only publisher has tier null', find(fv.why, 'publisher').tier === null && fv.parts.reputation === 0.35);
+  ok('why: no publisher entry without publisher', !find(rank.score(byId.B, foryou).why, 'publisher'));
+
+  // explore
+  ok('explore: +0.04 for tech never interacted with', d.parts.explore === 0.04 && !!find(d.why, 'explore'));
+  ok('explore: 0 when a tech has an affinity entry', a.parts.explore === 0 && rank.score(byId.C, foryou).parts.explore === 0);
+  ok('explore: 0 for an untagged item', rank.score(byId.E, foryou).parts.explore === 0);
+  var noProfile = { mode: 'foryou', profile: { verticals: [], tech: [] }, affinity: affinity, taxonomy: taxonomy };
+  // contract: the bonus depends on interaction history only, not on the profile
+  var d0 = rank.score(byId.D, noProfile);
+  ok('explore: still +0.04 when the profile is empty', d0.parts.explore === 0.04 && !!find(d0.why, 'explore'), JSON.stringify(d0));
+  ok('explore: added after the empty-profile rescale', near(d0.score, (0.45 * 0.4 + 0.2 * 0.75 + 0.15 * 0.5) / 0.8 + 0.04), String(d0.score));
+
+  // empty profile renormalisation
+  var c0 = rank.score(byId.C, noProfile);
+  var c0expected = (0.45 * 0.95 + 0.15 * c0.parts.affinity) / 0.8;
+  ok('empty profile: relevance term dropped and weights rescaled', near(c0.score, c0expected), c0.score + ' vs ' + c0expected);
+  ok('empty profile: not penalised versus raw formula', c0.score > 0.45 * 0.95 + 0.15 * c0.parts.affinity);
+  ok('empty profile: relevance part is 0', c0.parts.relevance === 0);
+  var plain = { mode: 'foryou', profile: {}, affinity: {}, taxonomy: taxonomy };
+  var noPub = [byId.B, byId.C, byId.E];
+  ok('empty profile: no-publisher items order like all mode', ids(rank.order(noPub, plain)) === ids(rank.order(noPub, all)), ids(rank.order(noPub, plain)));
+  ok('empty profile: reputation still lifts', rank.order([byId.A, byId.C], plain)[0].id === 'A');
+  var tagged = { id: 'T', heat: 50, tech: ['vision'] };
+  ok('empty profile: unexplored tagged item outranks untagged twin at equal heat', rank.order([byId.E, tagged], plain)[0].id === 'T', ids(rank.order([byId.E, tagged], plain)));
+
+  // robustness
+  function noThrow(name, fn) { try { fn(); ok(name, true); } catch (e) { ok(name, false, e.message); } }
+  noThrow('no throw: item without publisher/tech/tags', function () { rank.score({ id: 'x', heat: 10 }, foryou); });
+  noThrow('no throw: empty item', function () { rank.score({}, foryou); });
+  noThrow('no throw: null item', function () { rank.score(null, foryou); });
+  noThrow('no throw: missing ctx', function () { rank.score(byId.A); rank.order(items); });
+  noThrow('no throw: ctx without taxonomy/affinity', function () { rank.score(byId.A, { mode: 'foryou', profile: profile }); });
+  noThrow('no throw: profile naming an unknown vertical', function () { rank.score(byId.A, { mode: 'foryou', profile: { verticals: ['nope'], tech: [] }, taxonomy: taxonomy }); });
+  noThrow('no throw: order of empty / non-array', function () { rank.order([], foryou); rank.order(null, foryou); });
+  ok('missing heat scores 0 heat', rank.score({}, all).score === 0);
+  ok('heat above 100 clamps', rank.score({ heat: 140 }, all).score === 1);
+
+  // determinism: the source may not consult the clock, randomness or storage
+  fetch('../../app/js/rank.js').then(function (r) { return r.text(); }).then(function (src) {
+    ok('source has no Date.now / Math.random / localStorage', src.indexOf('Date.now') === -1 && src.indexOf('Math.random') === -1 && src.indexOf('localStorage') === -1);
+  }).catch(function (e) { ok('source fetched', false, e.message); }).then(function () {
+    log('DONE ' + pass + '/' + total);
+  });
+})();
+</script>
+</body>
+</html>

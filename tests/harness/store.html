@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>harness: store.js</title>
+</head>
+<body>
+<pre id="out"></pre>
+<script src="../../app/js/store.js"></script>
+<script>
+(function () {
+  'use strict';
+  var out = document.getElementById('out');
+  var pass = 0, total = 0;
+  function log(line) { out.textContent += line + '\n'; }
+  function ok(name, cond, detail) {
+    total++;
+    if (cond) { pass++; log('PASS ' + name); }
+    else log('FAIL ' + name + ': ' + (detail || ''));
+  }
+  function near(a, b, eps) { return Math.abs(a - b) <= (eps || 1e-6); }
+  function noThrow(name, fn) {
+    try { fn(); ok(name, true); } catch (e) { ok(name, false, e && e.message); }
+  }
+
+  var S = window.Radar.store;
+  var DAY = 24 * 3600 * 1000;
+  var clock = 1000000000000;
+  S._now = function () { return clock; };
+
+  function fresh() {
+    try { localStorage.clear(); } catch (e) {}
+    S.reset();
+  }
+
+  var item = { id: 'i1', sourceId: 'hn-ai-agents', tech: ['mcp', 'agents'], tags: ['hn'] };
+  var item2 = { id: 'i2', sourceId: 'gh-mcp-servers', tech: ['typescript'], tags: ['mcp-server'] };
+
+  // A thrown exception must surface as a FAIL line, never as a silent truncation.
+  try {
+
+  // ── defaults ────────────────────────────────────────────────────────────
+  fresh();
+  var p = S.prefs();
+  ok('defaults.theme', p.theme === 'dark');
+  ok('defaults.lang', p.lang === 'en');
+  ok('defaults.mode', p.mode === 'foryou');
+  ok('defaults.profile', JSON.stringify(p.profile) === JSON.stringify({ verticals: [], tech: [], orgsOnly: false }));
+  ok('defaults.get-def', S.get('nothing', 42) === 42);
+  ok('defaults.affinity-empty', Object.keys(S.affinity().tag).length === 0 && Object.keys(S.affinity().source).length === 0);
+  ok('defaults.saved-empty', S.saved().length === 0 && S.hidden().length === 0);
+  ok('defaults.isNew-first-visit', S.isNew('x') === false);
+  ok('defaults.lastVisitAt-null', S.lastVisitAt() === null);
+  ok('defaults.lastHidden-null', S.lastHidden() === null);
+  ok('defaults.lastVisit-null', S.lastVisit() === null);
+  // The names ARCHITECTURE.md lists for Radar.store must all exist as functions.
+  ok('api.contract-surface', ['prefs', 'get', 'set', 'open', 'save', 'hide', 'dwell', 'affinity', 'saved',
+    'isSaved', 'isHidden', 'isNew', 'markVisit', 'lastVisit'].every(function (k) { return typeof S[k] === 'function'; }));
+
+  // ── prefs + v1 keys ─────────────────────────────────────────────────────
+  S.set('theme', 'light');
+  S.set('lang', 'ar');
+  ok('prefs.v1-theme-key', localStorage.getItem('radar.theme') === 'light');
+  ok('prefs.v1-lang-key', localStorage.getItem('radar.lang') === 'ar');
+  S.set('theme', 'blue');
+  ok('prefs.enum-rejected', S.get('theme') === 'light');
+  S.prefs({ mode: 'all', profile: { verticals: ['fintech'], tech: ['mcp'], orgsOnly: 1 } });
+  ok('prefs.patch', S.get('mode') === 'all' && S.get('profile').orgsOnly === true && S.get('profile').tech[0] === 'mcp');
+  ok('prefs.key-prefix', Object.keys(localStorage).every(function (k) { return k.indexOf('radar.') === 0; }));
+
+  // v1 wrote raw strings; a fresh module instance must read them back.
+  fresh();
+  localStorage.setItem('radar.theme', 'light');
+  localStorage.setItem('radar.lang', 'ar');
+  ok('prefs.v1-read-back', S.get('theme') === 'light' && S.get('lang') === 'ar');
+
+  // ── weights ─────────────────────────────────────────────────────────────
+  fresh();
+  S.open(item);
+  var a = S.affinity();
+  ok('weights.open', near(a.tag.mcp, 1) && near(a.tag.agents, 1) && near(a.tag.hn, 1) && near(a.source['hn-ai-agents'], 1));
+  S.save(item);
+  a = S.affinity();
+  ok('weights.save', near(a.tag.mcp, 3) && near(a.source['hn-ai-agents'], 3));
+  ok('weights.save-order', S.isSaved('i1') && S.saved()[0] === 'i1');
+  S.save(item2);
+  ok('weights.saved-newest-first', S.saved()[0] === 'i2' && S.saved()[1] === 'i1');
+  S.unsave(item);
+  ok('weights.unsave', !S.isSaved('i1') && near(S.affinity().tag.mcp, 1));
+  S.dwell(item, 3);
+  ok('weights.dwell-short-ignored', near(S.affinity().tag.mcp, 1));
+  S.dwell(item, 9);
+  ok('weights.dwell', near(S.affinity().tag.mcp, 1.5));
+  var item3 = { id: 'i3', sourceId: 'arxiv-cs-ai', tech: ['rust'], tags: ['paper'] };
+  S.hide(item3);
+  ok('weights.hide', S.isHidden('i3') && near(S.affinity().tag.rust, -2) && near(S.affinity().source['arxiv-cs-ai'], -2));
+
+  // ── undo hide ───────────────────────────────────────────────────────────
+  var lh = S.lastHidden();
+  ok('undo.lastHidden', lh && lh.id === 'i3');
+  S.unhide('i3');
+  ok('undo.unhide', !S.isHidden('i3') && S.lastHidden() === null);
+  ok('undo.unhide-reverses-weight', !('rust' in S.affinity().tag));
+  S.hide(item3);
+  clock += 11000;
+  ok('undo.window-expired', S.lastHidden() === null);
+  ok('undo.still-hidden', S.isHidden('i3'));
+  // Hiding an already-hidden item is a no-op and must not arm undo.
+  S.hide(item3);
+  ok('undo.rehide-no-candidate', S.lastHidden() === null && near(S.affinity().tag.rust, -2, 1e-3));
+  // An unhide after the window is a list edit: the committed -2.0 stays.
+  S.hide({ id: 'i4', sourceId: 'src4', tech: ['go'], tags: [] });
+  clock += 11000;
+  S.unhide('i4');
+  ok('undo.expired-unhide-keeps-weight', !S.isHidden('i4') && near(S.affinity().tag.go, -2, 1e-3));
+  // Within the window, unhide without a prior lastHidden() poll still reverses.
+  S.hide({ id: 'i5', sourceId: 'src5', tech: ['zig'], tags: [] });
+  clock += 5000;
+  S.unhide('i5');
+  ok('undo.in-window-unhide-reverses', !S.isHidden('i5') && !('zig' in S.affinity().tag));
+
+  // ── decay ───────────────────────────────────────────────────────────────
+  fresh();
+  S.open(item);
+  clock += 14 * DAY;
+  a = S.affinity();
+  ok('decay.half-life', near(a.tag.mcp, 0.5, 1e-9), String(a.tag.mcp));
+  clock += 14 * DAY;
+  ok('decay.two-half-lives', near(S.affinity().tag.mcp, 0.25, 1e-9));
+  S.open(item);
+  ok('decay.event-adds-to-decayed', near(S.affinity().tag.mcp, 1.25, 1e-9));
+
+  // ── prune ───────────────────────────────────────────────────────────────
+  fresh();
+  S.open(item);
+  clock += 5 * 14 * DAY; // 1 / 32 ≈ 0.031 < 0.05
+  a = S.affinity();
+  ok('prune.decayed-below-threshold', !('mcp' in a.tag) && !('hn-ai-agents' in a.source));
+  ok('prune.storage-emptied', (function () {
+    var raw = JSON.parse(localStorage.getItem('radar.affinity') || '{}');
+    return Object.keys(raw.tag || {}).length === 0;
+  })());
+
+  fresh();
+  var big = [];
+  for (var i = 0; i < 450; i++) big.push('t' + i);
+  // 450 tags plus one source: the cap drops the weakest to 400 total.
+  S.open({ id: 'x', sourceId: 'src', tech: big, tags: [] });
+  a = S.affinity();
+  var count = Object.keys(a.tag).length + Object.keys(a.source).length;
+  ok('prune.cap-400', count === 400, String(count));
+
+  // ── visits ──────────────────────────────────────────────────────────────
+  fresh();
+  S.markVisit(['a', 'b']);
+  ok('visit.first-nothing-new', !S.isNew('a') && !S.isNew('c'));
+  clock += DAY;
+  S.markVisit(['b', 'c']);
+  ok('visit.old-not-new', !S.isNew('a') && !S.isNew('b'));
+  ok('visit.unseen-is-new', S.isNew('c') && S.isNew('zzz'));
+  ok('visit.lastVisitAt', S.lastVisitAt() === clock - DAY);
+  S.markVisit(['d'], true);
+  ok('visit.append-keeps-baseline', S.isNew('d') && !S.isNew('a'));
+  S.markVisit(['e']);
+  ok('visit.rotate-includes-appended', !S.isNew('d') && !S.isNew('c') && S.isNew('a'));
+  var lv = S.lastVisit();
+  ok('visit.lastVisit-record', !!lv && lv.ids.join(',') === 'b,c,d' && lv.at === clock && S.lastVisitAt() === clock);
+  lv.ids.push('tampered');
+  ok('visit.lastVisit-is-a-copy', S.lastVisit().ids.length === 3);
+
+  // ── export / import / reset ─────────────────────────────────────────────
+  fresh();
+  S.set('theme', 'light');
+  S.save(item);
+  S.markVisit(['a']);
+  var dump = S['export']();
+  ok('backup.export-is-json', typeof dump === 'string' && JSON.parse(dump).data.saved[0] === 'i1');
+  fresh();
+  ok('backup.reset-clears', S.get('theme') === 'dark' && S.saved().length === 0 && localStorage.getItem('radar.saved') === null);
+  ok('backup.import', S['import'](dump) === true && S.get('theme') === 'light' && S.isSaved('i1') && near(S.affinity().tag.mcp, 2));
+  ok('backup.import-garbage', S['import']('{not json') === false && S['import'](null) === false);
+  // reset() alone (no localStorage.clear) must sweep every radar.* key, managed or not.
+  localStorage.setItem('radar.stray', '1');
+  localStorage.setItem('other.key', '1');
+  S.reset();
+  ok('backup.reset-sweeps-prefix', localStorage.getItem('radar.stray') === null && localStorage.getItem('radar.theme') === null);
+  ok('backup.reset-leaves-foreign-keys', localStorage.getItem('other.key') === '1');
+  localStorage.removeItem('other.key');
+
+  // ── storage that throws ────────────────────────────────────────────────
+  fresh();
+  var origSet = Storage.prototype.setItem;
+  var origGet = Storage.prototype.getItem;
+  var origRemove = Storage.prototype.removeItem;
+  var boom = function () { throw new Error('QuotaExceededError'); };
+  Storage.prototype.setItem = boom;
+  Storage.prototype.getItem = boom;
+  Storage.prototype.removeItem = boom;
+  try {
+    S.reset();
+    noThrow('throws.prefs', function () { S.prefs({ theme: 'light' }); S.get('mode'); S.set('mode', 'all'); });
+    noThrow('throws.events', function () { S.open(item); S.save(item); S.unsave(item); S.hide(item2); S.unhide('i2'); S.dwell(item, 10); });
+    noThrow('throws.reads', function () { S.affinity(); S.saved(); S.isSaved('i1'); S.hidden(); S.isHidden('i2'); S.lastHidden(); });
+    noThrow('throws.visits', function () { S.markVisit(['a']); S.markVisit(['b']); S.isNew('b'); S.lastVisitAt(); });
+    noThrow('throws.backup', function () { S['import'](S['export']()); S.reset(); });
+    var okMem = false;
+    try { S.set('theme', 'light'); S.save(item); okMem = S.get('theme') === 'light' && S.isSaved('i1'); } catch (e) {}
+    ok('throws.memory-fallback', okMem);
+  } finally {
+    Storage.prototype.setItem = origSet;
+    Storage.prototype.getItem = origGet;
+    Storage.prototype.removeItem = origRemove;
+  }
+
+  } catch (e) {
+    ok('harness.no-crash', false, String(e && e.stack || e));
+  }
+
+  log('DONE ' + pass + '/' + total);
+})();
+</script>
+</body>
+</html>

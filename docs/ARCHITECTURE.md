@@ -115,12 +115,12 @@ order, each attaching to `window.Radar`. **One file, one owner.**
 
 | File | Exposes | Depends on |
 |---|---|---|
-| `i18n.js` | `Radar.i18n = { t(key), lang, setLang(lang), dict }` — EN/AR dictionaries, `data-i18n` walker | — |
+| `i18n.js` | `Radar.i18n = { t(key), format(key, vars), lang, setLang(lang), dict }` — EN/AR dictionaries, `data-i18n` walker; `t('ago')` returns the `{m,h,d}` suffix object | — |
 | `icons.js` | `Radar.icons[name]` — inline Lucide-style SVG strings | — |
 | `store.js` | `Radar.store` — prefs (`theme`, `lang`, `mode`, `profile{verticals[],tech[],orgsOnly}`), behaviour events, `affinity()`, `saved()`, `isSaved/isHidden/isNew`, `markVisit(ids)`, `lastVisit` | — |
 | `rank.js` | `Radar.rank = { score(item, ctx), order(items, ctx), reputationOf(item) }`; `ctx = { mode, profile, affinity, taxonomy }` | store (read-only) |
 | `live.js` | `Radar.live = { start({onStatus, onData, onNewItems}), sync(), isServed }` — status polling (1.5 s while syncing, 45 s idle), data reload on `dataAt` change, id-diff for new items | — |
-| `scope.js` | `Radar.scope = { mount(el, opts), update(items, {newIds, selectedId}) }` — the radar scope (SVG): sectors = category, radius = heat (hot at centre), blip size = log popularity, **one sequential hue** for heat, pulse for new, tooltip + click | icons |
+| `scope.js` | `Radar.scope = { mount(el, opts), update(items, {newIds, selectedId}), unmount() }` — the radar scope (SVG): sectors = category, radius = heat (hot at centre), blip size = log popularity, **one sequential hue** for heat via `data-step` 1–4 → `--heat-1..4`, pulse for new, tooltip + click; the container becomes `role="group"` with a `sr-only` table; `data-showing` / `data-total` / `data-capped` report the 400-blip cap; labels are baked in at mount, so a language change re-mounts with `reducedMotion: true` | — |
 | `ui.js` | `Radar.ui = { init(), renderAll(), renderFeed(), … }` — everything that writes DOM except the scope | all above |
 | `main.js` | boot: prefs → theme/lang → data → live.start → ui.init | all |
 

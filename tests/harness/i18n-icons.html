@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>harness: i18n + icons</title></head>
+<body>
+<span data-i18n="forYou"></span><input data-i18n-ph="searchPh">
+<pre id="out"></pre>
+<script>
+  // Seed the stored preference BEFORE i18n.js loads so its init-from-storage
+  // path is exercised, not just the default.
+  window.__storageOk = false;
+  try { localStorage.setItem('radar.lang', 'ar'); window.__storageOk = localStorage.getItem('radar.lang') === 'ar'; } catch (e) {}
+</script>
+<script src="../../app/js/i18n.js"></script>
+<script src="../../app/js/icons.js"></script>
+<script>
+(function () {
+  var out = [], pass = 0, total = 0;
+  function ok(name, cond, detail) {
+    total++;
+    if (cond) { pass++; out.push('PASS ' + name); } else { out.push('FAIL ' + name + ': ' + (detail || '')); }
+  }
+  var i18n = window.Radar && window.Radar.i18n, icons = window.Radar && window.Radar.icons;
+  ok('i18n attached', !!i18n);
+  ok('icons attached', !!icons);
+  ok('storage available in harness', window.__storageOk === true, 'localStorage must work for the persistence tests to mean anything');
+  ok('lang initialised from storage', i18n.lang === 'ar', i18n.lang);
+  var html = document.documentElement;
+  ok('no DOM writes at load', html.lang === 'en' && html.dir === '' && document.querySelector('[data-i18n]').textContent === '' && document.querySelector('[data-i18n-ph]').placeholder === '',
+     'lang=' + html.lang + ' dir=' + html.dir + ' text=' + document.querySelector('[data-i18n]').textContent);
+
+  var keys = ['forYou','everything','notable','tier1','tier2','tier3','verified','newSince','saved','save','unsave','hide','undo','whyRanked','matches','sourceAffinity','explore','profileTitle','profileBusiness','profileTech','profileOrgs','profileSave','profileSkip','scope','scopeShowing','syncing','newSignals','live','offline','advice','release','tech','allTech',
+    'skip','tagline','title','all','skill','repo','news','discussion','research','syncedB','syncingSources','errText','never'];
+  keys.forEach(function (k) {
+    ok('en.' + k, typeof i18n.dict.en[k] === 'string' && i18n.dict.en[k].length > 0);
+    ok('ar.' + k, typeof i18n.dict.ar[k] === 'string' && i18n.dict.ar[k].length > 0);
+  });
+  var enK = Object.keys(i18n.dict.en), arK = Object.keys(i18n.dict.ar);
+  var onlyEn = enK.filter(function (k) { return !Object.prototype.hasOwnProperty.call(i18n.dict.ar, k); });
+  var onlyAr = arK.filter(function (k) { return !Object.prototype.hasOwnProperty.call(i18n.dict.en, k); });
+  ok('dictionaries same key set', onlyEn.length === 0 && onlyAr.length === 0, 'only en: ' + onlyEn.join(',') + ' only ar: ' + onlyAr.join(','));
+  var nonString = enK.filter(function (k) { return k !== 'ago' && typeof i18n.dict.en[k] !== 'string'; })
+    .concat(arK.filter(function (k) { return k !== 'ago' && typeof i18n.dict.ar[k] !== 'string'; }));
+  ok('every value is a string (except ago)', nonString.length === 0, nonString.join(','));
+
+  ok('setLang returns effective lang', i18n.setLang('ar') === 'ar' && i18n.lang === 'ar');
+  i18n.setLang('ar');
+  ok('setLang ar dir rtl', html.dir === 'rtl' && html.lang === 'ar', html.dir);
+  ok('walker text ar', document.querySelector('[data-i18n]').textContent === i18n.dict.ar.forYou);
+  ok('walker placeholder ar', document.querySelector('[data-i18n-ph]').placeholder === i18n.dict.ar.searchPh);
+  ok('t ar', i18n.t('save') === i18n.dict.ar.save);
+  i18n.setLang('en');
+  ok('setLang en dir ltr', html.dir === 'ltr' && html.lang === 'en', html.dir);
+  ok('walker text en', document.querySelector('[data-i18n]').textContent === 'For you');
+  ok('unknown lang falls back', i18n.setLang('xx') === 'en');
+  ['constructor', 'toString', 'hasOwnProperty', '__proto__'].forEach(function (p) {
+    ok('setLang(' + p + ') falls back', i18n.setLang(p) === 'en' && i18n.lang === 'en', i18n.lang);
+    var v = i18n.t(p);
+    ok('t(' + p + ') is the key', typeof v === 'string' && v === p, typeof v);
+  });
+  ok('setLang(undefined) falls back', i18n.setLang(undefined) === 'en');
+  ok('t fallback to key', i18n.t('nope.key') === 'nope.key');
+  ok('t falls back to en when ar lacks key', (function () {
+    var saved = i18n.dict.ar.save; delete i18n.dict.ar.save;
+    i18n.lang = 'ar'; var v = i18n.t('save'); i18n.lang = 'en'; i18n.dict.ar.save = saved;
+    return v === 'Save';
+  })());
+  ok('format substitutes', i18n.format('scopeShowing', { n: 5, total: 12 }) === 'showing 5 of 12', i18n.format('scopeShowing', { n: 5, total: 12 }));
+  ok('format multi', i18n.format('syncing', { done: 3, total: 27, current: 'HN' }) === 'Syncing 3 of 27 — HN');
+  ok('format leaves missing var', i18n.format('matches', {}) === 'matches {list}');
+  var persisted = null;
+  try { persisted = localStorage.getItem('radar.lang'); } catch (e) {}
+  ok('persisted lang', persisted === 'en', String(persisted));
+  ok('format on object value returns it', typeof i18n.format('ago', {}) === 'object');
+  ok('format zero is not a missing var', i18n.format('newSignals', { n: 0 }) === '0 new signals');
+
+  var want = ['all','skill','repo','news','discussion','research','up','down','link','copy','empty','error','ok','release','bookmark','bookmarkFilled','eyeOff','undo','badgeCheck','building','radar','filter','x','info','chevronDown','externalLink','tag','briefcase'];
+  want.forEach(function (n) {
+    var s = icons[n];
+    ok('icon.' + n, typeof s === 'string' && s.indexOf('<svg') === 0 && s.indexOf('currentColor') !== -1 && s.indexOf('viewBox="0 0 24 24"') !== -1);
+  });
+  ok('externalLink alias of link', icons.externalLink === icons.link);
+  // innerHTML uses the lenient HTML parser and never yields <parsererror>;
+  // parse as XML so a malformed tag or unclosed quote actually fails.
+  var bad = [];
+  want.forEach(function (n) {
+    var doc = new DOMParser().parseFromString(icons[n], 'image/svg+xml');
+    var root = doc.documentElement;
+    if (!root || root.nodeName !== 'svg' || doc.querySelector('parsererror') || root.children.length === 0) bad.push(n);
+  });
+  ok('all icons are well-formed svg with content', bad.length === 0, bad.join(','));
+  var raw = Object.keys(icons).filter(function (n) { return /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|\b(?:red|blue|green|black|white|gray|grey|orange|amber)\b/i.test(icons[n]); });
+  ok('no raw colour in any icon', raw.length === 0, raw.join(','));
+  var extra = Object.keys(icons).filter(function (n) { return want.indexOf(n) === -1; });
+  ok('no undocumented icon names', extra.length === 0, extra.join(','));
+
+  out.push('DONE ' + pass + '/' + total);
+  document.getElementById('out').textContent = out.join('\n');
+})();
+</script>
+</body></html>

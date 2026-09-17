@@ -1,0 +1,209 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>harness: live.js</title>
+<pre id="out"></pre>
+<script src="../../app/js/live.js"></script>
+<script>
+(function () {
+  'use strict';
+  var out = document.getElementById('out');
+  var pass = 0, total = 0;
+  function ok(name, cond, detail) {
+    total++;
+    if (cond) { pass++; out.textContent += 'PASS ' + name + '\n'; }
+    else out.textContent += 'FAIL ' + name + ': ' + (detail || '') + '\n';
+  }
+  function done() { out.textContent += 'DONE ' + pass + '/' + total + '\n'; }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function jsonResponse(body, status) {
+    return Promise.resolve({ ok: status === undefined || status < 400, status: status || 200,
+      json: function () { return Promise.resolve(body); } });
+  }
+
+  var live = window.Radar.live;
+  var realFetch = window.fetch;
+  var dataEvents = [], newEvents = [];
+  var base = { generatedAt: '2026-01-01T00:00:00Z', items: [{ id: 'a' }, { id: 'b' }] };
+  var next = { generatedAt: '2026-01-02T00:00:00Z', items: [{ id: 'b' }, { id: 'c' }, { id: 'd' }] };
+
+  ok('exposes Radar.live', live && typeof live.start === 'function' && typeof live.sync === 'function' && typeof live.stop === 'function' && typeof live.status === 'function');
+  ok('isServed true over http', live.isServed === true);
+  ok('status() null before start', live.status() === null);
+
+  // Fast intervals so the whole loop runs inside the virtual-time budget.
+  live._intervals = { fast: 20, idle: 40, offline: 60 };
+
+  // (1) real server: data + status
+  new Promise(function (resolve) {
+    var got = null;
+    live.start({
+      onStatus: function () { if (got) resolve(got); },
+      onData: function (p) { got = p; }
+    });
+    setTimeout(function () { resolve(got); }, 2500);
+  }).then(function (payload) {
+    ok('start() delivers a payload with items', payload && Array.isArray(payload.items) && payload.items.length > 0, 'no items');
+    var s = live.status();
+    ok('status() has state', s && typeof s.state === 'string', JSON.stringify(s));
+    ok('status() has dataAt', s && typeof s.dataAt === 'string' && s.dataAt.length > 0, JSON.stringify(s));
+    live.stop();
+
+    // (2) fake server: dataAt changes -> onData + onNewItems with the id diff
+    var stamps = ['2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', '2026-01-02T00:00:00Z'];
+    var dataCalls = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) { dataCalls++; return jsonResponse(dataCalls === 1 ? base : next); }
+      if (url.indexOf('api/status') !== -1) {
+        var st = stamps.length > 1 ? stamps.shift() : stamps[0];
+        return jsonResponse({ state: 'idle', dataAt: st, generatedAt: st });
+      }
+      return realFetch.apply(window, arguments);
+    };
+    live.start({
+      onData: function (p, meta) { dataEvents.push({ p: p, meta: meta }); },
+      onNewItems: function (ids, p) { newEvents.push({ ids: ids, p: p }); }
+    });
+    return wait(400);
+  }).then(function () {
+    live.stop();
+    ok('changed dataAt reloads data', dataEvents.length === 2, 'onData calls: ' + dataEvents.length);
+    ok('onNewItems fires once with the id diff', newEvents.length === 1 && newEvents[0].ids.join(',') === 'c,d', JSON.stringify(newEvents.map(function (e) { return e.ids; })));
+    ok('onNewItems not fired for the first payload', dataEvents.length > 0 && newEvents.length <= dataEvents.length - 1);
+    ok('onData meta carries newIds', dataEvents.length === 2 && dataEvents[1].meta.newIds.join(',') === 'c,d');
+
+    // (3) three failures -> offline once, recover silently
+    var calls = 0, statuses = [];
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      calls++;
+      if (calls <= 4) return Promise.reject(new TypeError('Failed to fetch'));
+      return jsonResponse({ state: 'idle', dataAt: 'x', generatedAt: base.generatedAt });
+    };
+    live.start({ onStatus: function (s) { statuses.push(s); } });
+    return wait(500).then(function () {
+      live.stop();
+      var offl = statuses.filter(function (s) { return s.state === 'offline'; });
+      ok('offline status emitted exactly once after 3 failures', offl.length === 1, 'offline count ' + offl.length + ' of ' + statuses.length + ' (' + calls + ' calls)');
+      ok('offline status carries error', offl.length === 1 && typeof offl[0].error === 'string' && offl[0].error.length > 0);
+      ok('no status emitted on the first two failures', statuses.length === 0 || statuses[0].state === 'offline');
+      ok('recovers silently with a real status', statuses.length >= 2 && statuses[statuses.length - 1].state === 'idle', JSON.stringify(statuses.map(function (s) { return s.state; })));
+    });
+  }).then(function () {
+    // (4) sync(): started:false but syncing elsewhere -> resolves; fast poll follows
+    var statusCalls = 0, posted = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('api/sync') !== -1) { posted++; return jsonResponse({ started: false, status: { state: 'syncing', done: 1, total: 5, dataAt: 'x' } }, 202); }
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      statusCalls++;
+      return jsonResponse({ state: 'syncing', dataAt: 'x', generatedAt: base.generatedAt });
+    };
+    return live.start({}).then(function () {
+      statusCalls = 0;
+      return live.sync();
+    }).then(function (r) {
+      ok('sync() resolves when someone else is syncing', r && r.started === false && r.status && r.status.state === 'syncing', JSON.stringify(r));
+      ok('sync() POSTs exactly once', posted === 1, 'posted ' + posted);
+      ok('status() reflects the sync response', live.status() && live.status().state === 'syncing');
+      return wait(150);
+    }).then(function () {
+      live.stop();
+      ok('fast poll runs while syncing', statusCalls >= 3, 'status polls in 150ms: ' + statusCalls);
+    });
+  }).then(function () {
+    // (5) sync() HTTP error rejects with a readable Error
+    window.fetch = function () { return jsonResponse({ error: 'nope' }, 500); };
+    return live.sync().then(function () { ok('sync() rejects on HTTP error', false, 'resolved'); },
+      function (e) { ok('sync() rejects on HTTP error', e instanceof Error && /HTTP 500/.test(e.message), String(e)); });
+  }).then(function () {
+    // (6) stop() clears timers: no more polls afterwards
+    var polls = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      polls++; return jsonResponse({ state: 'idle', dataAt: 'y' });
+    };
+    return live.start({}).then(function () { return wait(60); }).then(function () {
+      live.stop(); var seen = polls;
+      return wait(200).then(function () { ok('stop() halts polling', polls === seen, 'polls after stop: ' + (polls - seen)); });
+    });
+  }).then(function () {
+    // (7) stop() while a status fetch is in flight: the late response must not call back
+    var release = null, lateStatus = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      return new Promise(function (r) { release = function () { r({ ok: true, status: 200, json: function () { return Promise.resolve({ state: 'idle', dataAt: 'z' }); } }); }; });
+    };
+    return live.start({ onStatus: function () { lateStatus++; } }).then(function () {
+      // start() resolved, so poll() has issued its status fetch and is parked on `release`
+      ok('poll issued before stop (probe precondition)', typeof release === 'function');
+      live.stop();
+      release();
+      return wait(30);
+    }).then(function () {
+      ok('stop() cancels an in-flight poll callback', lateStatus === 0, 'onStatus after stop: ' + lateStatus);
+    });
+  }).then(function () {
+    // (8) restart while the previous session's load is still pending: stale payload must not leak
+    var pending = null, seen = [];
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) {
+        if (pending === null) return new Promise(function (r) { pending = function (body) { r({ ok: true, status: 200, json: function () { return Promise.resolve(body); } }); }; });
+        return jsonResponse(next);
+      }
+      return jsonResponse({ state: 'idle', dataAt: 'w', generatedAt: next.generatedAt });
+    };
+    var p1 = live.start({ onData: function (p) { seen.push('old:' + p.generatedAt); }, onNewItems: function (ids) { seen.push('oldnew:' + ids.join('')); } });
+    var p2 = live.start({ onData: function (p) { seen.push('new:' + p.generatedAt); }, onNewItems: function (ids) { seen.push('newnew:' + ids.join('')); } });
+    return p2.then(function () { pending(base); return wait(30); }).then(function () {
+      live.stop();
+      ok('restart discards the previous session\'s in-flight load', seen.join(',') === 'new:' + next.generatedAt, JSON.stringify(seen));
+      return p1.then(function () {}, function () {});
+    });
+  }).then(function () {
+    // (9) fetch throwing synchronously: promises reject, nothing throws, the loop still reaches offline
+    window.fetch = function () { throw new TypeError('boom'); };
+    var syncThrew = false, syncRejected = false, sp;
+    try { sp = live.sync().then(function () {}, function (e) { syncRejected = e instanceof Error; }); } catch (e) { syncThrew = true; sp = Promise.resolve(); }
+    return sp.then(function () {
+      ok('sync() rejects rather than throws when fetch throws', syncRejected && !syncThrew, syncThrew ? 'threw synchronously' : 'did not reject');
+      var st = [], startThrew = false, p;
+      try { p = live.start({ onStatus: function (s) { st.push(s.state); } }); } catch (e) { startThrew = true; p = Promise.resolve(); }
+      return p.then(function () {}, function () {}).then(function () { return wait(250); }).then(function () {
+        live.stop();
+        ok('start() rejects rather than throws when fetch throws, and still goes offline', !startThrew && st.join(',') === 'offline', (startThrew ? 'threw synchronously; ' : '') + 'statuses: ' + JSON.stringify(st));
+      });
+    });
+  }).then(function () {
+    // (10) sync() after stop(): no callback reaches the old handlers
+    var late = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('api/sync') !== -1) return jsonResponse({ started: true, status: { state: 'syncing' } }, 202);
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      return jsonResponse({ state: 'idle', dataAt: 'u' });
+    };
+    return live.start({ onStatus: function () { late++; } }).then(function () {
+      live.stop(); late = 0;
+      return live.sync();
+    }).then(function (r) {
+      ok('sync() after stop() still resolves', r && r.started === true);
+      return wait(30);
+    }).then(function () {
+      ok('sync() after stop() emits nothing to the old handlers', late === 0, 'onStatus calls: ' + late);
+    });
+  }).then(function () {
+    // (11) a throwing handler does not stop the poll loop
+    var polls = 0;
+    window.fetch = function (url) {
+      if (url.indexOf('trends.json') !== -1) return jsonResponse(base);
+      polls++; return jsonResponse({ state: 'idle', dataAt: 'v', generatedAt: base.generatedAt });
+    };
+    return live.start({ onStatus: function () { throw new Error('renderer broke'); }, onData: function () { throw new Error('renderer broke'); } })
+      .then(function () { return wait(150); })
+      .then(function () { live.stop(); ok('a throwing handler does not stop the poll loop', polls >= 3, 'polls: ' + polls); });
+  }).catch(function (e) {
+    ok('harness ran without exception', false, (e && e.stack) || String(e));
+  }).then(function () {
+    window.fetch = realFetch;
+    done();
+  });
+})();
+</script>

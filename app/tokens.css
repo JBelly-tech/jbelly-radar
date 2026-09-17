@@ -69,6 +69,14 @@
   --data-3: oklch(72% 0.13 300);
   --data-4: oklch(70% 0.03 250);
 
+  /* heat — ONE sequential hue, light → strong, for every magnitude encoding
+     (scope blips, row meters, mix bars). Step 4 is 8.9:1 on this surface. */
+  --heat-1: oklch(42% 0.05 68);
+  --heat-2: oklch(56% 0.10 68);
+  --heat-3: oklch(68% 0.14 68);
+  --heat-4: oklch(80% 0.16 72);
+  --heat-ink: oklch(17% 0.03 68);
+
   /* elevation — nearly flat by design */
   --overlay: rgb(0 0 0 / 0.55);
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
@@ -125,6 +133,13 @@ html.light {
   --data-2: oklch(52% 0.12 235);
   --data-3: oklch(52% 0.14 300);
   --data-4: oklch(55% 0.02 250);
+
+  /* heat on the light surface: step 4 is 4.1:1 against --background */
+  --heat-1: oklch(88% 0.05 75);
+  --heat-2: oklch(78% 0.10 70);
+  --heat-3: oklch(68% 0.14 64);
+  --heat-4: oklch(55% 0.15 58);
+  --heat-ink: oklch(100% 0 0);
 
   --overlay: rgb(15 25 40 / 0.35);
   --shadow-xs: 0 1px 2px 0 rgb(15 25 40 / 0.06);

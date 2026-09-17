@@ -105,7 +105,7 @@ button { font: inherit; color: inherit; }
   text-transform: uppercase;
   color: var(--sidebar-muted);
 }
-.sidebar__label + .sidebar__label, .nav + .sidebar__label { margin-top: 24px; }
+.sidebar__label + .sidebar__label, .nav + .sidebar__label, .chips + .sidebar__label { margin-top: 24px; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav__item {

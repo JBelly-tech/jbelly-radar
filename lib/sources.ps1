@@ -513,6 +513,9 @@ function Invoke-RadarSync {
     # trends.js exists so app/index.html also works when opened straight from disk
     # (file://), where fetch() of a local JSON file is blocked by the browser.
     [System.IO.File]::WriteAllText((Join-Path $dataDir 'trends.js'), "window.RADAR_DATA = $json;", $utf8)
+    if ($taxonomy) {
+        [System.IO.File]::WriteAllText((Join-Path $dataDir 'taxonomy.js'), "window.RADAR_TAXONOMY = " + ($taxonomy | ConvertTo-Json -Depth 6 -Compress) + ";", $utf8)
+    }
     [System.IO.File]::WriteAllText((Join-Path $Root ('data\history\' + $started.ToString('yyyy-MM-dd') + '.json')), $json, $utf8)
 
     Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $done -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt

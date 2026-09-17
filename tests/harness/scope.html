@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>harness: scope</title>
+<link rel="stylesheet" href="../../app/tokens.css">
+<style>
+  /* --heat-* are owned by tokens.css once the integrator adds them; the harness
+     carries the proposed values so the page renders before that lands. */
+  :root { --heat-1: oklch(50% 0.07 70); --heat-2: oklch(62% 0.11 70); --heat-3: oklch(74% 0.15 70); --heat-4: oklch(86% 0.17 80); }
+  html.light { --heat-1: oklch(84% 0.09 82); --heat-2: oklch(72% 0.14 72); --heat-3: oklch(60% 0.15 62); --heat-4: oklch(48% 0.14 52); }
+  body { margin: 0; padding: 24px; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  #host { width: 480px; height: 480px; }
+  pre { font: 12px/1.5 var(--font-mono); }
+
+  /* ── css_needed (verbatim copy of what goes into app.css) ── */
+  .scope { position: relative; inline-size: 100%; max-inline-size: 520px; min-inline-size: 260px; aspect-ratio: 1; margin-inline: auto; }
+  .scope__svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
+  .scope__ring { fill: none; stroke: var(--border); stroke-width: 1; }
+  .scope__ring--rim { stroke: var(--input); }
+  .scope__divider { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; }
+  .scope__ring-label { fill: var(--muted-foreground); font: 500 10px var(--font-mono); }
+  .scope__sector { fill: var(--muted-foreground); font: 600 11px var(--font-sans); letter-spacing: 0.04em; text-transform: uppercase; }
+  .scope__blip { cursor: pointer; outline: none; }
+  .scope__dot { fill: var(--heat-1); stroke: none; transition: r var(--duration) ease-out; }
+  .scope__blip[data-step="2"] .scope__dot { fill: var(--heat-2); }
+  .scope__blip[data-step="3"] .scope__dot { fill: var(--heat-3); }
+  .scope__blip[data-step="4"] .scope__dot { fill: var(--heat-4); }
+  .scope__blip--notable .scope__dot { stroke: var(--mono); stroke-width: 1.25; }
+  .scope__blip:hover .scope__dot, .scope__blip:focus-visible .scope__dot { stroke: var(--foreground); stroke-width: 1.5; }
+  .scope__blip:focus-visible .scope__dot { stroke: var(--ring); stroke-width: 2; }
+  .scope__halo { fill: var(--primary); fill-opacity: 0.18; stroke: var(--primary); stroke-width: 1.5; }
+  .scope__pulse { fill: none; stroke: var(--heat-4); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: scope-pulse 1.8s ease-out infinite; }
+  .scope--still .scope__pulse { animation: none; opacity: 0.7; }
+  @keyframes scope-pulse { 0% { transform: scale(0.7); opacity: 0.9; } 100% { transform: scale(1.8); opacity: 0; } }
+  .scope__sweep { transform-box: view-box; transform-origin: 50% 50%; animation: scope-sweep 3s linear 1 forwards; pointer-events: none; }
+  .scope__sweep-fill { fill: var(--primary); fill-opacity: 0.14; }
+  .scope__sweep-edge { stroke: var(--primary); stroke-width: 1.5; stroke-linecap: round; }
+  @keyframes scope-sweep { 0% { transform: rotate(0deg); opacity: 1; } 85% { opacity: 1; } 100% { transform: rotate(360deg); opacity: 0; } }
+  .scope__tip { position: absolute; inset-inline-start: 0; inset-block-start: 0; max-inline-size: 260px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--popover); color: var(--popover-foreground); box-shadow: var(--shadow-md); font-size: 12px; line-height: 1.35; pointer-events: none; z-index: 2; }
+  .scope__tip-title { font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .scope__tip-meta { color: var(--muted-foreground); margin-block-start: 2px; }
+  .scope__tip-stats { color: var(--primary); font-family: var(--font-mono); margin-block-start: 4px; }
+</style>
+</head>
+<body>
+<div id="host"></div>
+<pre id="out"></pre>
+<script src="../../app/js/scope.js"></script>
+<script>
+(function () {
+  'use strict';
+  var out = document.getElementById('out');
+  var pass = 0, total = 0;
+  function ok(name, cond, detail) {
+    total++;
+    if (cond) { pass++; out.textContent += 'PA' + 'SS ' + name + '\n'; }
+    else out.textContent += 'FA' + 'IL ' + name + ': ' + (detail || '') + '\n';
+  }
+  function done() { out.textContent += 'DO' + 'NE ' + pass + '/' + total + '\n'; }
+
+  var CATS = ['skill', 'repo', 'release', 'discussion', 'news', 'research'];
+  var LABELS = { skill: 'Skills', repo: 'Repositories', release: 'Releases', discussion: 'Discussion', news: 'News', research: 'Research' };
+
+  function make(n) {
+    var items = [];
+    for (var i = 0; i < n; i++) {
+      var cat = CATS[i % CATS.length];
+      items.push({
+        id: 'id-' + i, category: cat, title: 'Item ' + i, url: 'https://example.test/' + i,
+        sourceId: 's' + (i % 4), sourceLabel: 'Source ' + (i % 4),
+        metric: [12, 480, 3200, 91000, 700000][i % 5], metricLabel: 'stars',
+        heat: (i * 37) % 101,
+        publisher: i === 3 ? { key: 'acme', name: 'Acme', tier: 1, verified: true } : null
+      });
+    }
+    // fixed anchors for the geometry checks
+    items[0].heat = 100;
+    items[1].heat = 0;
+    return items;
+  }
+
+  var host = document.getElementById('host');
+  var selected = null, hovered = 'unset';
+  var S = window.Radar && window.Radar.scope;
+  ok('module attached', !!S && typeof S.mount === 'function' && typeof S.update === 'function');
+
+  S.mount(host, {
+    labels: LABELS, reducedMotion: false,
+    onSelect: function (it) { selected = it; },
+    onHover: function (it) { hovered = it; }
+  });
+
+  var svg = host.querySelector('svg');
+  ok('svg exists', !!svg);
+  ok('sweep present when motion allowed', !!host.querySelector('.scope__sweep'));
+  // role=group, never img: img makes children presentational and would hide the blips and table from AT
+  ok('container role=group with label', host.getAttribute('role') === 'group' && !!host.getAttribute('aria-label'));
+
+  var items = make(60);
+  S.update(items, { newIds: ['id-2', 'id-5'], selectedId: 'id-7' });
+
+  function blips() { return host.querySelectorAll('.scope__blip'); }
+  function dotOf(id) { return host.querySelector('.scope__blip[data-id="' + id + '"] .scope__dot'); }
+  function pos(id) { var d = dotOf(id); return [d.getAttribute('cx'), d.getAttribute('cy')].join(','); }
+
+  ok('blip count equals items', blips().length === 60, String(blips().length));
+
+  var before = {}, node7 = host.querySelector('.scope__blip[data-id="id-7"]');
+  items.forEach(function (it) { before[it.id] = pos(it.id); });
+  S.update(items, { newIds: ['id-2', 'id-5'], selectedId: 'id-7' });
+  var same = items.every(function (it) { return before[it.id] === pos(it.id); });
+  ok('positions stable across identical updates', same);
+  ok('svg not recreated by update', host.querySelector('svg') === svg);
+  ok('blip nodes are reused by id across updates', host.querySelector('.scope__blip[data-id="id-7"]') === node7);
+
+  // state flip: id-7 stops being selected and becomes new; id-2 the reverse
+  S.update(items, { newIds: ['id-7'], selectedId: 'id-2' });
+  var g7k = host.querySelector('.scope__blip[data-id="id-7"]'), g2k = host.querySelector('.scope__blip[data-id="id-2"]');
+  ok('exit of state removes its ring', !g7k.querySelector('.scope__halo') && g7k.querySelector('.scope__pulse') &&
+    !g2k.querySelector('.scope__pulse') && g2k.querySelector('.scope__halo'));
+  ok('pulse sits directly under the dot', g7k.querySelector('.scope__pulse').nextSibling === g7k.querySelector('.scope__dot'));
+  S.update(items, { newIds: ['id-2', 'id-5'], selectedId: 'id-7' });
+
+  var vb = svg.getAttribute('viewBox').split(' ').map(Number);
+  var cx = vb[2] / 2, cy = vb[3] / 2;
+  var rim = Number(host.querySelector('.scope__ring[data-heat="0"]').getAttribute('r'));
+  function dist(id) {
+    var d = dotOf(id);
+    return Math.hypot(Number(d.getAttribute('cx')) - cx, Number(d.getAttribute('cy')) - cy);
+  }
+  ok('heat 100 within 2 of centre', dist('id-0') <= 2, dist('id-0').toFixed(2));
+  ok('heat 0 within 4 of rim', Math.abs(dist('id-1') - rim) <= 4, (dist('id-1') - rim).toFixed(2));
+
+  var rows = host.querySelectorAll('table.sr-only tbody tr');
+  ok('sr-only table has one row per blip', rows.length === blips().length, rows.length + ' vs ' + blips().length);
+
+  var tabs = Array.prototype.every.call(blips(), function (g) {
+    return g.getAttribute('tabindex') === '0' && g.getAttribute('role') === 'button' && !!g.getAttribute('aria-label');
+  });
+  ok('every blip is a focusable labelled button', tabs);
+
+  ok('new item has a pulse ring', !!host.querySelector('.scope__blip[data-id="id-2"] .scope__pulse'));
+  ok('selected item has a halo', !!host.querySelector('.scope__blip[data-id="id-7"] .scope__halo'));
+  ok('tier-1 publisher is marked notable', host.querySelector('.scope__blip[data-id="id-3"]').classList.contains('scope__blip--notable'));
+  ok('heat steps assigned', dotOf('id-0').parentNode.getAttribute('data-step') === '4' && dotOf('id-1').parentNode.getAttribute('data-step') === '1');
+
+  var big = dotOf('id-24'), small = dotOf('id-0');   // both skills: metric 700000 vs 12
+  var rb = Number(big.getAttribute('r')), rs = Number(small.getAttribute('r'));
+  ok('blip radius grows with log metric, clamped 3..11', rb > rs && rs >= 3 && rb <= 11, rb + ' / ' + rs);
+  ok('news blip has fixed 5 px radius', Number(dotOf('id-4').getAttribute('r')) === 5 && Number(dotOf('id-10').getAttribute('r')) === 5);
+
+  var g7 = host.querySelector('.scope__blip[data-id="id-7"]');
+  g7.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  ok('Enter selects via onSelect', selected && selected.id === 'id-7');
+  selected = null;
+  g7.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  ok('click selects via onSelect', selected && selected.id === 'id-7');
+
+  g7.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+  var tip = host.querySelector('.scope__tip');
+  ok('hover shows tooltip and calls onHover', !tip.hidden && hovered && hovered.id === 'id-7' && tip.textContent.indexOf('Item 7') === 0);
+  var hb = host.getBoundingClientRect(), tb = tip.getBoundingClientRect();
+  ok('tooltip stays inside container', tb.left >= hb.left && tb.right <= hb.right && tb.top >= hb.top && tb.bottom <= hb.bottom);
+  g7.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+  ok('leaving hides tooltip and calls onHover(null)', tip.hidden && hovered === null);
+
+  S.update(make(700), {});
+  ok('cap at 400 for 700 items', blips().length === 400, String(blips().length));
+  ok('cap reported in data attributes', host.getAttribute('data-showing') === '400' && host.getAttribute('data-total') === '700' && host.getAttribute('data-capped') === 'true');
+
+  // edge inputs the integrator is told about: null heat sits on the rim, unknown category lands in the last sector
+  S.update([{ id: 'x-null', category: 'news', title: 'n', heat: null, metric: null },
+            { id: 'x-cat', category: 'mystery', title: 'm', heat: 50, metric: 1 }], {});
+  ok('null heat lands on the rim', Math.abs(dist('x-null') - rim) <= 4 && Number(dotOf('x-null').getAttribute('r')) === 5);
+  var dx = dotOf('x-cat');
+  ok('unknown category falls into the last sector', Number(dx.getAttribute('cx')) < cx && Number(dx.getAttribute('cy')) < cy);
+
+  S.update([], {});
+  ok('empty update leaves zero blips', blips().length === 0);
+  ok('rings intact after empty update', host.querySelectorAll('.scope__ring').length === 4);
+  ok('sector labels intact after empty update', host.querySelectorAll('.scope__sector').length === 6 &&
+    host.querySelector('.scope__sector[data-cat="repo"]').textContent === 'Repositories');
+  ok('ring labels intact after empty update', host.querySelectorAll('.scope__ring-label').length === 3);
+
+  // reduced motion: no sweep, still class set
+  var host2 = document.createElement('div');
+  host2.style.width = '300px'; host2.style.height = '300px';
+  document.body.appendChild(host2);
+  S.mount(host2, { labels: LABELS, reducedMotion: true });
+  ok('reducedMotion skips the sweep', !host2.querySelector('.scope__sweep') && host2.classList.contains('scope--still'));
+  S.unmount();
+  S.unmount();
+  ok('unmount empties the container and is idempotent', host2.childNodes.length === 0 && !host2.classList.contains('scope'));
+  S.update(make(3), {});
+  ok('update after unmount is a no-op', host2.childNodes.length === 0);
+  document.body.removeChild(host2);
+
+  done();
+
+  // leave the scope populated so the harness page doubles as a visual check
+  S.mount(host, { labels: LABELS, reducedMotion: false });
+  S.update(make(60), { newIds: ['id-2', 'id-5'], selectedId: 'id-7' });
+})();
+</script>
+</body>
+</html>
