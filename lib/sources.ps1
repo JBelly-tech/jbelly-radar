@@ -7,6 +7,12 @@
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+# Sibling modules: technology tagging and publisher reputation. Loaded here so
+# every entry point (radar.ps1, scripts/sync.ps1, tests) gets the whole pipeline
+# from one dot-source.
+. (Join-Path $PSScriptRoot 'classify.ps1')
+. (Join-Path $PSScriptRoot 'reputation.ps1')
+
 # -- small helpers ------------------------------------------------------------
 
 function Get-Prop {
@@ -137,7 +143,7 @@ function Get-SkillsShItems {
         $owner = ($repo -split '/')[0]
         $item = New-RadarItem -SourceId $Source.id -SourceLabel $Source.label -Category $Source.category `
             -Title $m.Groups[3].Value -Url "https://github.com/$repo" `
-            -Summary "Agent skill published by $repo." `
+            -Summary "Published by $repo on the skills directory." `
             -Author $repo -Metric $installs -MetricLabel 'installs' `
             -Tags @('skill', $owner) -Spark $chrono -Install "npx skills add $repo" `
             -Key "skills.sh/$repo#$($m.Groups[2].Value)"
@@ -362,6 +368,31 @@ function Set-RadarMomentum {
 
 # -- the sync itself ----------------------------------------------------------
 
+# data/status.json is the live progress file: the dashboard polls it while a
+# sync runs, so the user sees "12 of 27 sources, reading TechCrunch" instead of a
+# spinner. Written after every source; cheap, atomic via rename.
+function Write-RadarStatus {
+    param([string]$Path, [string]$State, [datetime]$StartedAt, [int]$Done, [int]$Total, [string]$Current, $Sources, [string]$GeneratedAt = '')
+    if (-not $Path) { return }
+    # Windows PowerShell 5.1 throws "Argument types do not match" on @() over an
+    # empty generic List inside a hashtable literal; copy through the pipeline.
+    $sourceList = @()
+    if ($Sources) { $sourceList = @($Sources | ForEach-Object { $_ }) }
+    $obj = [pscustomobject]@{
+        state       = $State
+        startedAt   = $StartedAt.ToString('o')
+        updatedAt   = [datetime]::UtcNow.ToString('o')
+        done        = $Done
+        total       = $Total
+        current     = $Current
+        generatedAt = $GeneratedAt
+        sources     = $sourceList
+    }
+    $tmp = $Path + '.tmp'
+    [System.IO.File]::WriteAllText($tmp, ($obj | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+    Move-Item -Path $tmp -Destination $Path -Force
+}
+
 function Invoke-RadarSync {
     param([string]$Root, [switch]$Quiet)
 
@@ -370,11 +401,19 @@ function Invoke-RadarSync {
     $health = New-Object System.Collections.Generic.List[object]
     $started = [datetime]::UtcNow
 
+    $dataDir = Join-Path $Root 'data'
+    if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
+    $statusPath = Join-Path $dataDir 'status.json'
+    $enabled = @($config.sources | Where-Object { Get-Prop $_ 'enabled' $true })
+    $done = 0
+    Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done 0 -Total $enabled.Count -Current '' -Sources @()
+
     foreach ($src in $config.sources) {
         if (-not (Get-Prop $src 'enabled' $true)) {
             $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'disabled'; count = 0; message = 'disabled in config'; ms = 0 })
             continue
         }
+        Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done $done -Total $enabled.Count -Current $src.label -Sources $health
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $fetched = $null
@@ -411,6 +450,7 @@ function Invoke-RadarSync {
             $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'failed'; count = 0; message = $msg; ms = [int]$sw.ElapsedMilliseconds })
             if (-not $Quiet) { Write-Host ("  {0,-22} FAILED  {1}" -f $src.id, $msg) -ForegroundColor DarkRed }
         }
+        $done++
     }
 
     # dedupe by canonical URL: first source wins, so order in config is priority order
@@ -422,10 +462,29 @@ function Invoke-RadarSync {
         $items.Add($it)
     }
 
+    # classify → resolve publishers → momentum → heat (docs/ARCHITECTURE.md)
+    $taxonomyPath = Join-Path $Root 'config\taxonomy.json'
+    $taxonomy = $null
+    if (Test-Path $taxonomyPath) { $taxonomy = Get-Content -Raw -Encoding UTF8 $taxonomyPath | ConvertFrom-Json }
+    Set-RadarTech -Items $items -Taxonomy $taxonomy
+
+    $publishersPath = Join-Path $Root 'config\publishers.json'
+    $publishers = [pscustomobject]@{ publishers = @() }
+    if (Test-Path $publishersPath) { $publishers = Get-Content -Raw -Encoding UTF8 $publishersPath | ConvertFrom-Json }
+    Set-RadarPublishers -Items $items -Publishers $publishers -CachePath (Join-Path $Root 'data\history\orgs.json') -MaxLookups (Get-Prop $config.defaults 'orgLookupsPerSync' 20) -Quiet:$Quiet
+
     Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data\history\metrics.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
     Set-RadarHeat -Items $items -HeatConfig $config.heat
 
     $sorted = @($items | Sort-Object -Property @{ Expression = { $_.heat }; Descending = $true }, @{ Expression = { $_.ageDays }; Descending = $false })
+
+    # publishers seen this run, so the client can render names and tiers without the whole list
+    $seenPublishers = [ordered]@{}
+    foreach ($it in $sorted) {
+        if ($it.publisher -and -not $seenPublishers.Contains($it.publisher.key)) {
+            $seenPublishers[$it.publisher.key] = [pscustomobject]@{ name = $it.publisher.name; tier = $it.publisher.tier; sector = $it.publisher.sector; verified = $it.publisher.verified }
+        }
+    }
 
     $payload = [pscustomobject]@{
         generatedAt = $started.ToString('o')
@@ -437,20 +496,26 @@ function Invoke-RadarSync {
             news       = @($sorted | Where-Object { $_.category -eq 'news' }).Count
             discussion = @($sorted | Where-Object { $_.category -eq 'discussion' }).Count
             research   = @($sorted | Where-Object { $_.category -eq 'research' }).Count
+            release    = @($sorted | Where-Object { $_.category -eq 'release' }).Count
+            notable    = @($sorted | Where-Object { $_.publisher }).Count
         }
-        sources = $health
-        items   = $sorted
+        sources    = $health
+        publishers = [pscustomobject]$seenPublishers
+        items      = $sorted
     }
 
-    $dataDir = Join-Path $Root 'data'
-    if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
     $utf8 = New-Object System.Text.UTF8Encoding($false)
     $json = $payload | ConvertTo-Json -Depth 8 -Compress
-    [System.IO.File]::WriteAllText((Join-Path $dataDir 'trends.json'), $json, $utf8)
+    # Write to a temp file and rename, so a reader never sees a half-written file.
+    $tmp = Join-Path $dataDir 'trends.json.tmp'
+    [System.IO.File]::WriteAllText($tmp, $json, $utf8)
+    Move-Item -Path $tmp -Destination (Join-Path $dataDir 'trends.json') -Force
     # trends.js exists so app/index.html also works when opened straight from disk
     # (file://), where fetch() of a local JSON file is blocked by the browser.
     [System.IO.File]::WriteAllText((Join-Path $dataDir 'trends.js'), "window.RADAR_DATA = $json;", $utf8)
     [System.IO.File]::WriteAllText((Join-Path $Root ('data\history\' + $started.ToString('yyyy-MM-dd') + '.json')), $json, $utf8)
+
+    Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $done -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt
 
     return $payload
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "$comment": "Curated reputation tiers. tier 1 = global platform owner, 2 = major tech/AI company or foundation, 3 = notable startup or lab. github = organisation logins (lowercase); domains = hosts used for news/blog matching (subdomains match automatically). Adding an organisation is one JSON object; tests/check.ps1 rejects a login or domain claimed twice.",
+  "publishers": [
+    { "key": "cloudflare", "name": "Cloudflare", "tier": 1, "sector": "cloud", "github": ["cloudflare"], "domains": ["cloudflare.com"] },
+    { "key": "google", "name": "Google", "tier": 1, "sector": "big-tech", "github": ["google", "googleapis", "google-gemini", "googlecloudplatform", "google-deepmind", "google-research", "tensorflow", "android"], "domains": ["google.com", "blog.google", "deepmind.google", "googleblog.com", "research.google"] },
+    { "key": "microsoft", "name": "Microsoft", "tier": 1, "sector": "big-tech", "github": ["microsoft", "azure", "dotnet", "github", "azure-samples"], "domains": ["microsoft.com", "github.blog", "azure.com", "visualstudio.com"] },
+    { "key": "aws", "name": "Amazon Web Services", "tier": 1, "sector": "cloud", "github": ["aws", "awslabs", "aws-samples", "amzn", "amazon-science"], "domains": ["amazon.com", "aws.amazon.com"] },
+    { "key": "meta", "name": "Meta", "tier": 1, "sector": "big-tech", "github": ["facebook", "facebookresearch", "meta-llama", "facebookincubator", "pytorch"], "domains": ["meta.com", "ai.meta.com", "engineering.fb.com", "llama.com", "pytorch.org"] },
+    { "key": "apple", "name": "Apple", "tier": 1, "sector": "big-tech", "github": ["apple", "ml-explore"], "domains": ["apple.com", "machinelearning.apple.com"] },
+    { "key": "nvidia", "name": "NVIDIA", "tier": 1, "sector": "chip", "github": ["nvidia", "nvidia-ai-iot", "nvlabs", "nvidia-nemo"], "domains": ["nvidia.com"] },
+    { "key": "openai", "name": "OpenAI", "tier": 1, "sector": "ai-lab", "github": ["openai"], "domains": ["openai.com"] },
+    { "key": "anthropic", "name": "Anthropic", "tier": 1, "sector": "ai-lab", "github": ["anthropics", "anthropic-ai"], "domains": ["anthropic.com", "claude.com", "claude.ai"] },
+    { "key": "vercel", "name": "Vercel", "tier": 2, "sector": "devtools", "github": ["vercel", "vercel-labs"], "domains": ["vercel.com", "nextjs.org"] },
+    { "key": "stripe", "name": "Stripe", "tier": 2, "sector": "payments", "github": ["stripe", "stripe-samples"], "domains": ["stripe.com"] },
+    { "key": "huggingface", "name": "Hugging Face", "tier": 2, "sector": "ai-lab", "github": ["huggingface"], "domains": ["huggingface.co"] },
+    { "key": "supabase", "name": "Supabase", "tier": 2, "sector": "database", "github": ["supabase", "supabase-community"], "domains": ["supabase.com"] },
+    { "key": "docker", "name": "Docker", "tier": 2, "sector": "devtools", "github": ["docker", "moby"], "domains": ["docker.com"] },
+    { "key": "hashicorp", "name": "HashiCorp", "tier": 2, "sector": "devtools", "github": ["hashicorp"], "domains": ["hashicorp.com"] },
+    { "key": "mistral", "name": "Mistral AI", "tier": 2, "sector": "ai-lab", "github": ["mistralai"], "domains": ["mistral.ai"] },
+    { "key": "modelcontextprotocol", "name": "Model Context Protocol", "tier": 2, "sector": "foundation", "github": ["modelcontextprotocol"], "domains": ["modelcontextprotocol.io"] },
+    { "key": "langchain", "name": "LangChain", "tier": 3, "sector": "devtools", "github": ["langchain-ai"], "domains": ["langchain.com", "langchain.dev"] },
+    { "key": "ollama", "name": "Ollama", "tier": 3, "sector": "devtools", "github": ["ollama"], "domains": ["ollama.com"] }
+  ]
+}
