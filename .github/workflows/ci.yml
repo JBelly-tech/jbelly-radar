@@ -27,6 +27,20 @@ jobs:
           if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
           Write-Host "PSScriptAnalyzer: no errors"
 
+      # The browser harnesses need the dashboard served and a data file to load;
+      # an empty trends.json is enough because every harness brings its fixtures.
+      - name: Browser harnesses (headless Edge)
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path data | Out-Null
+          '{"generatedAt":"2026-01-01T00:00:00Z","durationMs":0,"counts":{"total":0},"sources":[],"publishers":{},"items":[]}' | Set-Content -Encoding UTF8 data\trends.json
+          $p = Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','radar.ps1','-NoSync','-NoOpen' -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 6
+          $code = 1
+          try { powershell -NoProfile -ExecutionPolicy Bypass -File tests\run-harness.ps1; $code = $LASTEXITCODE }
+          finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          exit $code
+
   # Sources are public and can rate-limit or go down; this job reports, it does
   # not gate. It exists so a silently dead source is noticed.
   sources:

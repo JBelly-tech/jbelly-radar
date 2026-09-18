@@ -60,11 +60,15 @@
 
   function prefs() { return store.prefs(); }
 
+  // Arabic labels live in the taxonomy as label_ar / why_ar; English is the fallback.
+  function ar() { return R.i18n.lang === 'ar'; }
   function techLabel(tag) {
     var tx = state.taxonomy && state.taxonomy.technologies;
-    if (tx) for (var i = 0; i < tx.length; i++) if (tx[i].tag === tag) return tx[i].label;
+    if (tx) for (var i = 0; i < tx.length; i++) if (tx[i].tag === tag) return (ar() && tx[i].label_ar) || tx[i].label;
     return tag;
   }
+  function verticalLabel(v) { return (ar() && v.label_ar) || v.label; }
+  function whyText(m) { return (ar() && m.why_ar) || m.why; }
 
   function verticalById(id) {
     var vs = state.taxonomy && state.taxonomy.verticals;
@@ -194,7 +198,7 @@
       .slice(0, 18);
     el.innerHTML = rows.map(function (tx) {
       return '<button class="chip chip--sm" type="button" data-tech="' + esc(tx.tag) + '" aria-pressed="' + !!state.tech[tx.tag] + '">' +
-        esc(tx.label) + '<span class="chip__n">' + counts[tx.tag] + '</span></button>';
+        esc(techLabel(tx.tag)) + '<span class="chip__n">' + counts[tx.tag] + '</span></button>';
     }).join('');
   }
 
@@ -404,6 +408,11 @@
       var meta = [esc(it.sourceLabel)];
       if (it.ageDays != null) meta.push(esc(ago(it.ageDays)));
       if (it.author && it.category !== 'news' && !it.publisher) meta.push(esc(it.author));
+      // a release feed's title is often just a version string; say whose release it is
+      var title = it.title;
+      if (it.category === 'release' && /^(v?\d|release\b|@|rust-v|\d{4}\.\d)/i.test(title)) {
+        title = (it.publisher ? it.publisher.name : it.sourceLabel.split(' · ')[0]) + ' · ' + title;
+      }
       var chips = (it.tech || []).slice(0, 4).map(function (tg) {
         return '<button class="chip chip--sm" type="button" data-tech="' + esc(tg) + '" aria-pressed="' + !!state.tech[tg] + '">' + esc(techLabel(tg)) + '</button>';
       }).join('');
@@ -414,7 +423,7 @@
         '<div class="item__heat" title="heat ' + it.heat + '"><i style="--h:' + it.heat + '%"></i></div>' +
         '<div class="item__main">' +
           '<div class="item__title-row">' +
-            '<h3 class="item__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></h3>' +
+            '<h3 class="item__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(title) + '</a></h3>' +
             tierBadge(it) +
             (isNewRow ? '<span class="badge badge--new badge--sm">new</span>' : '') +
           '</div>' +
@@ -515,13 +524,13 @@
     var v = verticalById(verticals[0]);
     if (!v) { card.hidden = true; return; }
     card.hidden = false;
-    title.textContent = fmt('advice', { vertical: v.label });
+    title.textContent = fmt('advice', { vertical: verticalLabel(v) });
     el.innerHTML = v.technologies_that_matter.slice(0, 6).map(function (m, i) {
       return '<div class="advice__row">' +
         '<span class="advice__rank">' + (i + 1) + '</span>' +
         '<div>' +
           '<button class="chip chip--sm" type="button" data-tech="' + esc(m.tag) + '" aria-pressed="' + !!state.tech[m.tag] + '">' + esc(techLabel(m.tag)) + '<span class="chip__n">' + (counts[m.tag] || 0) + '</span></button>' +
-          '<div class="advice__why">' + esc(m.why) + '</div>' +
+          '<div class="advice__why">' + esc(whyText(m)) + '</div>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -553,10 +562,10 @@
   function renderDrawer() {
     var tx = state.taxonomy;
     $('profileVerticals').innerHTML = tx.verticals.map(function (v) {
-      return '<button class="chip" type="button" data-dv="' + esc(v.id) + '" aria-pressed="' + (draft.verticals.indexOf(v.id) !== -1) + '">' + I.briefcase + esc(v.label) + '</button>';
+      return '<button class="chip" type="button" data-dv="' + esc(v.id) + '" aria-pressed="' + (draft.verticals.indexOf(v.id) !== -1) + '">' + I.briefcase + esc(verticalLabel(v)) + '</button>';
     }).join('');
     $('profileTech').innerHTML = tx.technologies.map(function (x) {
-      return '<button class="chip" type="button" data-dt="' + esc(x.tag) + '" aria-pressed="' + (draft.tech.indexOf(x.tag) !== -1) + '">' + esc(x.label) + '</button>';
+      return '<button class="chip" type="button" data-dt="' + esc(x.tag) + '" aria-pressed="' + (draft.tech.indexOf(x.tag) !== -1) + '">' + esc((ar() && x.label_ar) || x.label) + '</button>';
     }).join('');
     $('profileOrgs').checked = draft.orgsOnly;
   }

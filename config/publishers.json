@@ -1,25 +1,2107 @@
 {
-  "version": 1,
-  "$comment": "Curated reputation tiers. tier 1 = global platform owner, 2 = major tech/AI company or foundation, 3 = notable startup or lab. github = organisation logins (lowercase); domains = hosts used for news/blog matching (subdomains match automatically). Adding an organisation is one JSON object; tests/check.ps1 rejects a login or domain claimed twice.",
+  "version": 2,
+  "$comment": "Curated reputation tiers, verified on 2026-09-18 against api.github.com/orgs. tier 1 = global platform owner, 2 = major tech/AI company or foundation, 3 = notable startup or lab. github = organisation logins (lowercase); domains = bare hosts, subdomains match automatically. One JSON object per organisation; tests/check.ps1 rejects a login or domain claimed twice. platformHosts are hosts where the URL path's owner, not the host, is the publisher; they never match by domain. Entries with person: true are notable individuals (opt-in tier 3): the owner asked for organisations, so people are listed sparingly and never above tier 3.",
   "publishers": [
-    { "key": "cloudflare", "name": "Cloudflare", "tier": 1, "sector": "cloud", "github": ["cloudflare"], "domains": ["cloudflare.com"] },
-    { "key": "google", "name": "Google", "tier": 1, "sector": "big-tech", "github": ["google", "googleapis", "google-gemini", "googlecloudplatform", "google-deepmind", "google-research", "tensorflow", "android"], "domains": ["google.com", "blog.google", "deepmind.google", "googleblog.com", "research.google"] },
-    { "key": "microsoft", "name": "Microsoft", "tier": 1, "sector": "big-tech", "github": ["microsoft", "azure", "dotnet", "github", "azure-samples"], "domains": ["microsoft.com", "github.blog", "azure.com", "visualstudio.com"] },
-    { "key": "aws", "name": "Amazon Web Services", "tier": 1, "sector": "cloud", "github": ["aws", "awslabs", "aws-samples", "amzn", "amazon-science"], "domains": ["amazon.com", "aws.amazon.com"] },
-    { "key": "meta", "name": "Meta", "tier": 1, "sector": "big-tech", "github": ["facebook", "facebookresearch", "meta-llama", "facebookincubator", "pytorch"], "domains": ["meta.com", "ai.meta.com", "engineering.fb.com", "llama.com", "pytorch.org"] },
-    { "key": "apple", "name": "Apple", "tier": 1, "sector": "big-tech", "github": ["apple", "ml-explore"], "domains": ["apple.com", "machinelearning.apple.com"] },
-    { "key": "nvidia", "name": "NVIDIA", "tier": 1, "sector": "chip", "github": ["nvidia", "nvidia-ai-iot", "nvlabs", "nvidia-nemo"], "domains": ["nvidia.com"] },
-    { "key": "openai", "name": "OpenAI", "tier": 1, "sector": "ai-lab", "github": ["openai"], "domains": ["openai.com"] },
-    { "key": "anthropic", "name": "Anthropic", "tier": 1, "sector": "ai-lab", "github": ["anthropics", "anthropic-ai"], "domains": ["anthropic.com", "claude.com", "claude.ai"] },
-    { "key": "vercel", "name": "Vercel", "tier": 2, "sector": "devtools", "github": ["vercel", "vercel-labs"], "domains": ["vercel.com", "nextjs.org"] },
-    { "key": "stripe", "name": "Stripe", "tier": 2, "sector": "payments", "github": ["stripe", "stripe-samples"], "domains": ["stripe.com"] },
-    { "key": "huggingface", "name": "Hugging Face", "tier": 2, "sector": "ai-lab", "github": ["huggingface"], "domains": ["huggingface.co"] },
-    { "key": "supabase", "name": "Supabase", "tier": 2, "sector": "database", "github": ["supabase", "supabase-community"], "domains": ["supabase.com"] },
-    { "key": "docker", "name": "Docker", "tier": 2, "sector": "devtools", "github": ["docker", "moby"], "domains": ["docker.com"] },
-    { "key": "hashicorp", "name": "HashiCorp", "tier": 2, "sector": "devtools", "github": ["hashicorp"], "domains": ["hashicorp.com"] },
-    { "key": "mistral", "name": "Mistral AI", "tier": 2, "sector": "ai-lab", "github": ["mistralai"], "domains": ["mistral.ai"] },
-    { "key": "modelcontextprotocol", "name": "Model Context Protocol", "tier": 2, "sector": "foundation", "github": ["modelcontextprotocol"], "domains": ["modelcontextprotocol.io"] },
-    { "key": "langchain", "name": "LangChain", "tier": 3, "sector": "devtools", "github": ["langchain-ai"], "domains": ["langchain.com", "langchain.dev"] },
-    { "key": "ollama", "name": "Ollama", "tier": 3, "sector": "devtools", "github": ["ollama"], "domains": ["ollama.com"] }
+    {
+      "key": "google",
+      "name": "Google",
+      "tier": 1,
+      "sector": "big-tech",
+      "github": [
+        "google",
+        "googleapis",
+        "google-gemini",
+        "googlecloudplatform",
+        "google-deepmind",
+        "google-research",
+        "google-ai-edge",
+        "tensorflow",
+        "jax-ml",
+        "googlechrome",
+        "android",
+        "golang",
+        "angular",
+        "flutter",
+        "grpc",
+        "protocolbuffers"
+      ],
+      "domains": [
+        "google.com",
+        "blog.google",
+        "developers.googleblog.com",
+        "ai.google.dev",
+        "ai.google",
+        "research.google",
+        "cloud.google.com",
+        "deepmind.google",
+        "opensource.google",
+        "developer.android.com",
+        "go.dev",
+        "tensorflow.org",
+        "docs.jax.dev",
+        "angular.dev",
+        "flutter.dev",
+        "grpc.io",
+        "withgoogle.com",
+        "googleblog.com"
+      ]
+    },
+    {
+      "key": "microsoft",
+      "name": "Microsoft",
+      "tier": 1,
+      "sector": "big-tech",
+      "github": [
+        "microsoft",
+        "azure",
+        "dotnet",
+        "microsoftdocs",
+        "azure-samples"
+      ],
+      "domains": [
+        "microsoft.com",
+        "azure.microsoft.com",
+        "devblogs.microsoft.com",
+        "blogs.microsoft.com",
+        "learn.microsoft.com",
+        "techcommunity.microsoft.com",
+        "opensource.microsoft.com",
+        "dot.net",
+        "code.visualstudio.com",
+        "visualstudio.com"
+      ]
+    },
+    {
+      "key": "amazon-aws",
+      "name": "Amazon / AWS",
+      "tier": 1,
+      "sector": "cloud",
+      "github": [
+        "aws",
+        "awslabs",
+        "aws-samples",
+        "amzn",
+        "amazon-science",
+        "kirodotdev"
+      ],
+      "domains": [
+        "aws.amazon.com",
+        "docs.aws.amazon.com",
+        "amazon.com",
+        "amazon.science",
+        "developer.amazon.com",
+        "kiro.dev"
+      ]
+    },
+    {
+      "key": "meta",
+      "name": "Meta",
+      "tier": 1,
+      "sector": "big-tech",
+      "github": [
+        "facebook",
+        "facebookresearch",
+        "meta-llama",
+        "facebookincubator"
+      ],
+      "domains": [
+        "meta.com",
+        "ai.meta.com",
+        "engineering.fb.com",
+        "llama.com",
+        "llama.meta.com",
+        "opensource.fb.com",
+        "about.fb.com",
+        "react.dev"
+      ]
+    },
+    {
+      "key": "apple",
+      "name": "Apple",
+      "tier": 1,
+      "sector": "big-tech",
+      "github": [
+        "apple",
+        "ml-explore",
+        "swiftlang"
+      ],
+      "domains": [
+        "apple.com",
+        "developer.apple.com",
+        "machinelearning.apple.com",
+        "swift.org"
+      ]
+    },
+    {
+      "key": "cloudflare",
+      "name": "Cloudflare",
+      "tier": 1,
+      "sector": "cloud",
+      "github": [
+        "cloudflare"
+      ],
+      "domains": [
+        "cloudflare.com",
+        "blog.cloudflare.com",
+        "developers.cloudflare.com",
+        "radar.cloudflare.com",
+        "workers.cloudflare.com"
+      ]
+    },
+    {
+      "key": "nvidia",
+      "name": "NVIDIA",
+      "tier": 1,
+      "sector": "chip",
+      "github": [
+        "nvidia",
+        "nvlabs",
+        "nvidia-nemo"
+      ],
+      "domains": [
+        "nvidia.com",
+        "developer.nvidia.com",
+        "blogs.nvidia.com",
+        "research.nvidia.com",
+        "build.nvidia.com",
+        "docs.nvidia.com"
+      ]
+    },
+    {
+      "key": "openai",
+      "name": "OpenAI",
+      "tier": 1,
+      "sector": "ai-lab",
+      "github": [
+        "openai"
+      ],
+      "domains": [
+        "openai.com",
+        "platform.openai.com",
+        "developers.openai.com",
+        "community.openai.com",
+        "chatgpt.com"
+      ]
+    },
+    {
+      "key": "anthropic",
+      "name": "Anthropic",
+      "tier": 1,
+      "sector": "ai-lab",
+      "github": [
+        "anthropics"
+      ],
+      "domains": [
+        "anthropic.com",
+        "claude.com",
+        "docs.claude.com",
+        "claude.ai",
+        "docs.anthropic.com",
+        "console.anthropic.com"
+      ]
+    },
+    {
+      "key": "github",
+      "name": "GitHub",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "github"
+      ],
+      "domains": [
+        "github.blog",
+        "docs.github.com",
+        "githubnext.com",
+        "github.dev"
+      ]
+    },
+    {
+      "key": "vercel",
+      "name": "Vercel",
+      "tier": 2,
+      "sector": "cloud",
+      "github": [
+        "vercel",
+        "vercel-labs"
+      ],
+      "domains": [
+        "vercel.com",
+        "nextjs.org",
+        "v0.dev",
+        "v0.app",
+        "skills.sh",
+        "turbo.build",
+        "ai-sdk.dev"
+      ]
+    },
+    {
+      "key": "stripe",
+      "name": "Stripe",
+      "tier": 2,
+      "sector": "payments",
+      "github": [
+        "stripe",
+        "stripe-samples"
+      ],
+      "domains": [
+        "stripe.com",
+        "stripe.dev",
+        "docs.stripe.com"
+      ]
+    },
+    {
+      "key": "supabase",
+      "name": "Supabase",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "supabase",
+        "supabase-community"
+      ],
+      "domains": [
+        "supabase.com"
+      ]
+    },
+    {
+      "key": "hashicorp",
+      "name": "HashiCorp (IBM)",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "hashicorp"
+      ],
+      "domains": [
+        "hashicorp.com",
+        "developer.hashicorp.com"
+      ]
+    },
+    {
+      "key": "docker",
+      "name": "Docker",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "docker"
+      ],
+      "domains": [
+        "docker.com",
+        "docs.docker.com",
+        "hub.docker.com"
+      ]
+    },
+    {
+      "key": "hugging-face",
+      "name": "Hugging Face",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "huggingface"
+      ],
+      "domains": []
+    },
+    {
+      "key": "mistral-ai",
+      "name": "Mistral AI",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "mistralai"
+      ],
+      "domains": [
+        "mistral.ai",
+        "docs.mistral.ai",
+        "console.mistral.ai"
+      ]
+    },
+    {
+      "key": "databricks",
+      "name": "Databricks",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "databricks",
+        "mlflow"
+      ],
+      "domains": [
+        "databricks.com",
+        "mlflow.org"
+      ]
+    },
+    {
+      "key": "snowflake",
+      "name": "Snowflake",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "snowflakedb"
+      ],
+      "domains": [
+        "snowflake.com",
+        "docs.snowflake.com"
+      ]
+    },
+    {
+      "key": "mongodb",
+      "name": "MongoDB",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "mongodb"
+      ],
+      "domains": [
+        "mongodb.com"
+      ]
+    },
+    {
+      "key": "elastic",
+      "name": "Elastic",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "elastic"
+      ],
+      "domains": [
+        "elastic.co"
+      ]
+    },
+    {
+      "key": "jetbrains",
+      "name": "JetBrains",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "jetbrains"
+      ],
+      "domains": [
+        "jetbrains.com",
+        "blog.jetbrains.com",
+        "kotlinlang.org"
+      ]
+    },
+    {
+      "key": "linux-foundation",
+      "name": "Linux Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "linuxfoundation"
+      ],
+      "domains": [
+        "linuxfoundation.org",
+        "lfaidata.foundation"
+      ]
+    },
+    {
+      "key": "apache-software-foundation",
+      "name": "Apache Software Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "apache"
+      ],
+      "domains": [
+        "apache.org"
+      ]
+    },
+    {
+      "key": "cncf-kubernetes",
+      "name": "CNCF / Kubernetes",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "cncf",
+        "kubernetes",
+        "envoyproxy",
+        "istio",
+        "opencontainers"
+      ],
+      "domains": [
+        "cncf.io",
+        "kubernetes.io",
+        "envoyproxy.io",
+        "istio.io",
+        "opencontainers.org"
+      ]
+    },
+    {
+      "key": "pytorch-foundation",
+      "name": "PyTorch Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "pytorch"
+      ],
+      "domains": [
+        "pytorch.org"
+      ]
+    },
+    {
+      "key": "mozilla",
+      "name": "Mozilla",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "mozilla",
+        "mozilla-ai"
+      ],
+      "domains": [
+        "mozilla.org",
+        "mozilla.ai",
+        "hacks.mozilla.org",
+        "blog.mozilla.org",
+        "developer.mozilla.org"
+      ]
+    },
+    {
+      "key": "xai",
+      "name": "xAI",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "xai-org"
+      ],
+      "domains": [
+        "x.ai",
+        "docs.x.ai"
+      ]
+    },
+    {
+      "key": "perplexity",
+      "name": "Perplexity",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "perplexityai"
+      ],
+      "domains": [
+        "perplexity.ai",
+        "docs.perplexity.ai"
+      ]
+    },
+    {
+      "key": "cohere",
+      "name": "Cohere",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "cohere-ai"
+      ],
+      "domains": [
+        "cohere.com",
+        "docs.cohere.com"
+      ]
+    },
+    {
+      "key": "deepseek",
+      "name": "DeepSeek",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "deepseek-ai"
+      ],
+      "domains": [
+        "deepseek.com",
+        "api-docs.deepseek.com"
+      ]
+    },
+    {
+      "key": "moonshot-ai",
+      "name": "Moonshot AI (Kimi)",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "moonshotai"
+      ],
+      "domains": [
+        "moonshot.ai",
+        "moonshot.cn",
+        "kimi.com",
+        "platform.moonshot.ai"
+      ]
+    },
+    {
+      "key": "zhipu-z-ai",
+      "name": "Zhipu / Z.ai (GLM)",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "zai-org",
+        "thudm"
+      ],
+      "domains": [
+        "z.ai",
+        "zhipuai.cn",
+        "bigmodel.cn"
+      ]
+    },
+    {
+      "key": "minimax",
+      "name": "MiniMax",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "minimax-ai"
+      ],
+      "domains": [
+        "minimax.io",
+        "minimaxi.com",
+        "platform.minimax.io"
+      ]
+    },
+    {
+      "key": "alibaba",
+      "name": "Alibaba",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "alibaba",
+        "aliyun",
+        "qwenlm",
+        "modelscope"
+      ],
+      "domains": [
+        "alibaba.com",
+        "alibabacloud.com",
+        "aliyun.com",
+        "qwen.ai",
+        "qwenlm.github.io",
+        "modelscope.cn"
+      ]
+    },
+    {
+      "key": "tencent",
+      "name": "Tencent",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "tencent",
+        "tencentarc",
+        "tencent-hunyuan"
+      ],
+      "domains": [
+        "tencent.com",
+        "opensource.tencent.com",
+        "hunyuan.tencent.com",
+        "hy.tencent.com",
+        "arc.tencent.com",
+        "cloud.tencent.com"
+      ]
+    },
+    {
+      "key": "bytedance",
+      "name": "ByteDance",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "bytedance",
+        "bytedance-seed",
+        "volcengine",
+        "trae-ai"
+      ],
+      "domains": [
+        "bytedance.com",
+        "seed.bytedance.com",
+        "opensource.bytedance.com",
+        "volcengine.com",
+        "trae.ai"
+      ]
+    },
+    {
+      "key": "baidu",
+      "name": "Baidu",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "baidu",
+        "paddlepaddle"
+      ],
+      "domains": [
+        "baidu.com",
+        "research.baidu.com",
+        "paddlepaddle.org.cn"
+      ]
+    },
+    {
+      "key": "model-context-protocol",
+      "name": "Model Context Protocol",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "modelcontextprotocol"
+      ],
+      "domains": [
+        "modelcontextprotocol.io",
+        "registry.modelcontextprotocol.io",
+        "blog.modelcontextprotocol.io"
+      ]
+    },
+    {
+      "key": "agent2agent-project",
+      "name": "Agent2Agent (A2A) Project",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "a2aproject"
+      ],
+      "domains": [
+        "a2a-protocol.org"
+      ]
+    },
+    {
+      "key": "twilio",
+      "name": "Twilio",
+      "tier": 2,
+      "sector": "other",
+      "github": [
+        "twilio"
+      ],
+      "domains": [
+        "twilio.com"
+      ]
+    },
+    {
+      "key": "shopify",
+      "name": "Shopify",
+      "tier": 2,
+      "sector": "other",
+      "github": [
+        "shopify",
+        "remix-run"
+      ],
+      "domains": [
+        "shopify.com",
+        "shopify.engineering",
+        "shopify.dev",
+        "remix.run",
+        "reactrouter.com"
+      ]
+    },
+    {
+      "key": "atlassian",
+      "name": "Atlassian",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "atlassian"
+      ],
+      "domains": [
+        "atlassian.com"
+      ]
+    },
+    {
+      "key": "netflix",
+      "name": "Netflix",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "netflix"
+      ],
+      "domains": [
+        "netflix.com",
+        "netflixtechblog.com",
+        "netflix.github.io"
+      ]
+    },
+    {
+      "key": "uber",
+      "name": "Uber",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "uber"
+      ],
+      "domains": [
+        "uber.com",
+        "uber.github.io"
+      ]
+    },
+    {
+      "key": "airbnb",
+      "name": "Airbnb",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "airbnb"
+      ],
+      "domains": [
+        "airbnb.com",
+        "airbnb.tech",
+        "airbnb.io"
+      ]
+    },
+    {
+      "key": "spotify",
+      "name": "Spotify",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "spotify"
+      ],
+      "domains": [
+        "spotify.com",
+        "engineering.atspotify.com",
+        "backstage.io"
+      ]
+    },
+    {
+      "key": "salesforce",
+      "name": "Salesforce",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "salesforce",
+        "salesforceairesearch"
+      ],
+      "domains": [
+        "salesforce.com",
+        "developer.salesforce.com",
+        "opensource.salesforce.com",
+        "engineering.salesforce.com"
+      ]
+    },
+    {
+      "key": "oracle",
+      "name": "Oracle",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "oracle"
+      ],
+      "domains": [
+        "oracle.com",
+        "blogs.oracle.com",
+        "developer.oracle.com"
+      ]
+    },
+    {
+      "key": "ibm",
+      "name": "IBM",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "ibm"
+      ],
+      "domains": [
+        "ibm.com",
+        "research.ibm.com",
+        "developer.ibm.com"
+      ]
+    },
+    {
+      "key": "intel",
+      "name": "Intel",
+      "tier": 2,
+      "sector": "chip",
+      "github": [
+        "intel",
+        "intellabs"
+      ],
+      "domains": [
+        "intel.com",
+        "community.intel.com"
+      ]
+    },
+    {
+      "key": "amd",
+      "name": "AMD",
+      "tier": 2,
+      "sector": "chip",
+      "github": [
+        "amd",
+        "rocm"
+      ],
+      "domains": [
+        "amd.com",
+        "rocm.docs.amd.com",
+        "community.amd.com"
+      ]
+    },
+    {
+      "key": "adobe",
+      "name": "Adobe",
+      "tier": 2,
+      "sector": "big-tech",
+      "github": [
+        "adobe"
+      ],
+      "domains": [
+        "adobe.com",
+        "blog.adobe.com",
+        "developer.adobe.com"
+      ]
+    },
+    {
+      "key": "gitlab",
+      "name": "GitLab",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "gitlabhq"
+      ],
+      "domains": [
+        "about.gitlab.com",
+        "docs.gitlab.com"
+      ]
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "tier": 2,
+      "sector": "database",
+      "github": [
+        "redis"
+      ],
+      "domains": [
+        "redis.io"
+      ]
+    },
+    {
+      "key": "grafana-labs",
+      "name": "Grafana Labs",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "grafana"
+      ],
+      "domains": [
+        "grafana.com"
+      ]
+    },
+    {
+      "key": "datadog",
+      "name": "Datadog",
+      "tier": 2,
+      "sector": "devtools",
+      "github": [
+        "datadog"
+      ],
+      "domains": [
+        "datadoghq.com"
+      ]
+    },
+    {
+      "key": "digitalocean",
+      "name": "DigitalOcean",
+      "tier": 2,
+      "sector": "cloud",
+      "github": [
+        "digitalocean"
+      ],
+      "domains": [
+        "digitalocean.com"
+      ]
+    },
+    {
+      "key": "coreweave",
+      "name": "CoreWeave",
+      "tier": 2,
+      "sector": "cloud",
+      "github": [
+        "coreweave",
+        "wandb"
+      ],
+      "domains": [
+        "coreweave.com",
+        "wandb.ai",
+        "wandb.com"
+      ]
+    },
+    {
+      "key": "node-js-openjs-foundation",
+      "name": "Node.js / OpenJS Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "nodejs",
+        "openjs-foundation"
+      ],
+      "domains": [
+        "nodejs.org",
+        "openjsf.org"
+      ]
+    },
+    {
+      "key": "python-software-foundation",
+      "name": "Python Software Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "python"
+      ],
+      "domains": [
+        "python.org",
+        "blog.python.org",
+        "pypi.org"
+      ]
+    },
+    {
+      "key": "rust-foundation",
+      "name": "Rust Foundation",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "rust-lang"
+      ],
+      "domains": [
+        "rust-lang.org",
+        "blog.rust-lang.org",
+        "foundation.rust-lang.org"
+      ]
+    },
+    {
+      "key": "openssf",
+      "name": "OpenSSF",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "ossf"
+      ],
+      "domains": [
+        "openssf.org",
+        "scorecard.dev"
+      ]
+    },
+    {
+      "key": "w3c-tc39",
+      "name": "W3C / TC39",
+      "tier": 2,
+      "sector": "foundation",
+      "github": [
+        "w3c",
+        "tc39"
+      ],
+      "domains": [
+        "w3.org",
+        "tc39.es"
+      ]
+    },
+    {
+      "key": "paypal",
+      "name": "PayPal",
+      "tier": 2,
+      "sector": "payments",
+      "github": [
+        "paypal"
+      ],
+      "domains": [
+        "paypal.com",
+        "developer.paypal.com"
+      ]
+    },
+    {
+      "key": "block",
+      "name": "Block",
+      "tier": 2,
+      "sector": "payments",
+      "github": [
+        "block"
+      ],
+      "domains": [
+        "block.xyz",
+        "opensource.block.xyz",
+        "squareup.com",
+        "developer.squareup.com"
+      ]
+    },
+    {
+      "key": "coinbase",
+      "name": "Coinbase",
+      "tier": 2,
+      "sector": "payments",
+      "github": [
+        "coinbase"
+      ],
+      "domains": [
+        "coinbase.com"
+      ]
+    },
+    {
+      "key": "adyen",
+      "name": "Adyen",
+      "tier": 2,
+      "sector": "payments",
+      "github": [
+        "adyen"
+      ],
+      "domains": [
+        "adyen.com",
+        "docs.adyen.com"
+      ]
+    },
+    {
+      "key": "okta-auth0",
+      "name": "Okta / Auth0",
+      "tier": 2,
+      "sector": "other",
+      "github": [
+        "okta",
+        "auth0"
+      ],
+      "domains": [
+        "okta.com",
+        "developer.okta.com",
+        "auth0.com"
+      ]
+    },
+    {
+      "key": "ai2",
+      "name": "Ai2 (Allen Institute for AI)",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "allenai"
+      ],
+      "domains": [
+        "allenai.org"
+      ]
+    },
+    {
+      "key": "stability-ai",
+      "name": "Stability AI",
+      "tier": 2,
+      "sector": "ai-lab",
+      "github": [
+        "stability-ai"
+      ],
+      "domains": [
+        "stability.ai"
+      ]
+    },
+    {
+      "key": "langchain",
+      "name": "LangChain",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "langchain-ai"
+      ],
+      "domains": [
+        "langchain.com",
+        "blog.langchain.com",
+        "docs.langchain.com",
+        "smith.langchain.com"
+      ]
+    },
+    {
+      "key": "llamaindex",
+      "name": "LlamaIndex",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "run-llama"
+      ],
+      "domains": [
+        "llamaindex.ai",
+        "docs.llamaindex.ai"
+      ]
+    },
+    {
+      "key": "cursor",
+      "name": "Cursor (Anysphere)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "cursor",
+        "anysphere",
+        "getcursor"
+      ],
+      "domains": [
+        "cursor.com",
+        "docs.cursor.com",
+        "anysphere.co"
+      ]
+    },
+    {
+      "key": "cognition",
+      "name": "Cognition (Devin, Windsurf)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "cognitionai",
+        "exafunction"
+      ],
+      "domains": [
+        "cognition.ai",
+        "devin.ai",
+        "windsurf.com",
+        "docs.windsurf.com",
+        "codeium.com"
+      ]
+    },
+    {
+      "key": "replit",
+      "name": "Replit",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "replit"
+      ],
+      "domains": [
+        "replit.com",
+        "blog.replit.com",
+        "docs.replit.com"
+      ]
+    },
+    {
+      "key": "modal",
+      "name": "Modal",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "modal-labs"
+      ],
+      "domains": [
+        "modal.com"
+      ]
+    },
+    {
+      "key": "fireworks-ai",
+      "name": "Fireworks AI",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "fw-ai",
+        "fireworks-ai"
+      ],
+      "domains": [
+        "fireworks.ai",
+        "docs.fireworks.ai"
+      ]
+    },
+    {
+      "key": "together-ai",
+      "name": "Together AI",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "togethercomputer"
+      ],
+      "domains": [
+        "together.ai",
+        "docs.together.ai"
+      ]
+    },
+    {
+      "key": "groq",
+      "name": "Groq",
+      "tier": 3,
+      "sector": "chip",
+      "github": [
+        "groq"
+      ],
+      "domains": [
+        "groq.com",
+        "console.groq.com"
+      ]
+    },
+    {
+      "key": "cerebras",
+      "name": "Cerebras",
+      "tier": 3,
+      "sector": "chip",
+      "github": [
+        "cerebras"
+      ],
+      "domains": [
+        "cerebras.ai",
+        "cerebras.net",
+        "inference-docs.cerebras.ai"
+      ]
+    },
+    {
+      "key": "browserbase",
+      "name": "Browserbase",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "browserbase"
+      ],
+      "domains": [
+        "browserbase.com",
+        "docs.browserbase.com",
+        "stagehand.dev"
+      ]
+    },
+    {
+      "key": "e2b",
+      "name": "E2B",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "e2b-dev"
+      ],
+      "domains": [
+        "e2b.dev"
+      ]
+    },
+    {
+      "key": "composio",
+      "name": "Composio",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "composiohq"
+      ],
+      "domains": [
+        "composio.dev",
+        "docs.composio.dev"
+      ]
+    },
+    {
+      "key": "zapier",
+      "name": "Zapier",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "zapier"
+      ],
+      "domains": [
+        "zapier.com"
+      ]
+    },
+    {
+      "key": "n8n",
+      "name": "n8n",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "n8n-io"
+      ],
+      "domains": [
+        "n8n.io",
+        "blog.n8n.io",
+        "community.n8n.io",
+        "docs.n8n.io"
+      ]
+    },
+    {
+      "key": "ollama",
+      "name": "Ollama",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "ollama"
+      ],
+      "domains": [
+        "ollama.com"
+      ]
+    },
+    {
+      "key": "pinecone",
+      "name": "Pinecone",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "pinecone-io"
+      ],
+      "domains": [
+        "pinecone.io",
+        "docs.pinecone.io"
+      ]
+    },
+    {
+      "key": "weaviate",
+      "name": "Weaviate",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "weaviate"
+      ],
+      "domains": [
+        "weaviate.io"
+      ]
+    },
+    {
+      "key": "qdrant",
+      "name": "Qdrant",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "qdrant"
+      ],
+      "domains": [
+        "qdrant.tech"
+      ]
+    },
+    {
+      "key": "chroma",
+      "name": "Chroma",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "chroma-core"
+      ],
+      "domains": [
+        "trychroma.com",
+        "docs.trychroma.com"
+      ]
+    },
+    {
+      "key": "neon",
+      "name": "Neon (Databricks)",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "neondatabase"
+      ],
+      "domains": [
+        "neon.tech",
+        "neon.com"
+      ]
+    },
+    {
+      "key": "convex",
+      "name": "Convex",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "get-convex"
+      ],
+      "domains": [
+        "convex.dev",
+        "stack.convex.dev",
+        "docs.convex.dev"
+      ]
+    },
+    {
+      "key": "prisma",
+      "name": "Prisma",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "prisma"
+      ],
+      "domains": [
+        "prisma.io"
+      ]
+    },
+    {
+      "key": "clickhouse",
+      "name": "ClickHouse",
+      "tier": 3,
+      "sector": "database",
+      "github": [
+        "clickhouse"
+      ],
+      "domains": [
+        "clickhouse.com"
+      ]
+    },
+    {
+      "key": "clerk",
+      "name": "Clerk",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "clerk"
+      ],
+      "domains": [
+        "clerk.com"
+      ]
+    },
+    {
+      "key": "resend",
+      "name": "Resend",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "resend"
+      ],
+      "domains": [
+        "resend.com",
+        "react.email"
+      ]
+    },
+    {
+      "key": "railway",
+      "name": "Railway",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "railwayapp"
+      ],
+      "domains": [
+        "railway.com",
+        "railway.app",
+        "blog.railway.com",
+        "docs.railway.com"
+      ]
+    },
+    {
+      "key": "fly-io",
+      "name": "Fly.io",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "superfly"
+      ],
+      "domains": [
+        "fly.io"
+      ]
+    },
+    {
+      "key": "replicate",
+      "name": "Replicate",
+      "tier": 3,
+      "sector": "cloud",
+      "github": [
+        "replicate"
+      ],
+      "domains": [
+        "replicate.com"
+      ]
+    },
+    {
+      "key": "bun",
+      "name": "Bun",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "oven-sh"
+      ],
+      "domains": [
+        "bun.com",
+        "bun.sh"
+      ]
+    },
+    {
+      "key": "deno",
+      "name": "Deno",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "denoland"
+      ],
+      "domains": [
+        "deno.com",
+        "deno.land",
+        "deno.dev",
+        "jsr.io"
+      ]
+    },
+    {
+      "key": "astro",
+      "name": "Astro",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "withastro"
+      ],
+      "domains": [
+        "astro.build"
+      ]
+    },
+    {
+      "key": "tailwind-labs",
+      "name": "Tailwind Labs",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "tailwindlabs"
+      ],
+      "domains": [
+        "tailwindcss.com"
+      ]
+    },
+    {
+      "key": "shadcn",
+      "name": "shadcn",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "shadcn-ui",
+        "shadcn"
+      ],
+      "domains": [
+        "ui.shadcn.com",
+        "shadcn.com"
+      ]
+    },
+    {
+      "key": "vllm",
+      "name": "vLLM",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "vllm-project"
+      ],
+      "domains": [
+        "vllm.ai",
+        "docs.vllm.ai",
+        "blog.vllm.ai"
+      ]
+    },
+    {
+      "key": "ggml-llama-cpp",
+      "name": "ggml / llama.cpp",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "ggml-org"
+      ],
+      "domains": [
+        "ggml.ai"
+      ]
+    },
+    {
+      "key": "continue",
+      "name": "Continue",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "continuedev"
+      ],
+      "domains": [
+        "continue.dev",
+        "blog.continue.dev",
+        "docs.continue.dev"
+      ]
+    },
+    {
+      "key": "cline",
+      "name": "Cline",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "cline"
+      ],
+      "domains": [
+        "cline.bot",
+        "docs.cline.bot"
+      ]
+    },
+    {
+      "key": "all-hands-ai",
+      "name": "All Hands AI (OpenHands)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "all-hands-ai"
+      ],
+      "domains": [
+        "all-hands.dev",
+        "openhands.dev",
+        "docs.all-hands.dev"
+      ]
+    },
+    {
+      "key": "aider",
+      "name": "Aider",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "aider-ai"
+      ],
+      "domains": [
+        "aider.chat"
+      ]
+    },
+    {
+      "key": "crewai",
+      "name": "CrewAI",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "crewaiinc"
+      ],
+      "domains": [
+        "crewai.com",
+        "docs.crewai.com"
+      ]
+    },
+    {
+      "key": "browser-use",
+      "name": "Browser Use",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "browser-use"
+      ],
+      "domains": [
+        "browser-use.com",
+        "docs.browser-use.com"
+      ]
+    },
+    {
+      "key": "firecrawl",
+      "name": "Firecrawl",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "firecrawl",
+        "mendableai"
+      ],
+      "domains": [
+        "firecrawl.dev",
+        "docs.firecrawl.dev"
+      ]
+    },
+    {
+      "key": "exa",
+      "name": "Exa",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "exa-labs"
+      ],
+      "domains": [
+        "exa.ai",
+        "docs.exa.ai"
+      ]
+    },
+    {
+      "key": "elevenlabs",
+      "name": "ElevenLabs",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "elevenlabs"
+      ],
+      "domains": [
+        "elevenlabs.io"
+      ]
+    },
+    {
+      "key": "openrouter",
+      "name": "OpenRouter",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "openrouterteam"
+      ],
+      "domains": [
+        "openrouter.ai"
+      ]
+    },
+    {
+      "key": "langfuse",
+      "name": "Langfuse",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "langfuse"
+      ],
+      "domains": [
+        "langfuse.com"
+      ]
+    },
+    {
+      "key": "dify",
+      "name": "Dify (LangGenius)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "langgenius"
+      ],
+      "domains": [
+        "dify.ai",
+        "docs.dify.ai"
+      ]
+    },
+    {
+      "key": "stackblitz",
+      "name": "StackBlitz (Bolt)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "stackblitz"
+      ],
+      "domains": [
+        "stackblitz.com",
+        "bolt.new",
+        "blog.stackblitz.com"
+      ]
+    },
+    {
+      "key": "coderabbit",
+      "name": "CodeRabbit",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "coderabbitai"
+      ],
+      "domains": [
+        "coderabbit.ai",
+        "docs.coderabbit.ai"
+      ]
+    },
+    {
+      "key": "sourcegraph",
+      "name": "Sourcegraph",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "sourcegraph",
+        "ampcode"
+      ],
+      "domains": [
+        "sourcegraph.com",
+        "ampcode.com"
+      ]
+    },
+    {
+      "key": "sentry",
+      "name": "Sentry",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "getsentry"
+      ],
+      "domains": [
+        "sentry.io",
+        "blog.sentry.io",
+        "docs.sentry.io"
+      ]
+    },
+    {
+      "key": "pydantic",
+      "name": "Pydantic",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "pydantic"
+      ],
+      "domains": [
+        "pydantic.dev",
+        "ai.pydantic.dev",
+        "logfire.pydantic.dev"
+      ]
+    },
+    {
+      "key": "litellm",
+      "name": "LiteLLM (BerriAI)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "berriai"
+      ],
+      "domains": [
+        "litellm.ai",
+        "docs.litellm.ai"
+      ]
+    },
+    {
+      "key": "mem0",
+      "name": "Mem0",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "mem0ai"
+      ],
+      "domains": [
+        "mem0.ai",
+        "docs.mem0.ai"
+      ]
+    },
+    {
+      "key": "letta",
+      "name": "Letta",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "letta-ai"
+      ],
+      "domains": [
+        "letta.com",
+        "docs.letta.com"
+      ]
+    },
+    {
+      "key": "opencode",
+      "name": "OpenCode (Anomaly, formerly under SST)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "anomalyco",
+        "sst"
+      ],
+      "domains": [
+        "opencode.ai",
+        "anoma.ly",
+        "sst.dev"
+      ]
+    },
+    {
+      "key": "augment-code",
+      "name": "Augment Code",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "augmentcode"
+      ],
+      "domains": [
+        "augmentcode.com",
+        "docs.augmentcode.com"
+      ]
+    },
+    {
+      "key": "kilo-code",
+      "name": "Kilo Code",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "kilo-org"
+      ],
+      "domains": [
+        "kilo.ai",
+        "kilocode.ai"
+      ]
+    },
+    {
+      "key": "roo-code",
+      "name": "Roo Code (Roomote)",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "roocodeinc"
+      ],
+      "domains": [
+        "roocode.com",
+        "roomote.dev"
+      ]
+    },
+    {
+      "key": "zed",
+      "name": "Zed",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "zed-industries"
+      ],
+      "domains": [
+        "zed.dev"
+      ]
+    },
+    {
+      "key": "anyscale-ray",
+      "name": "Anyscale / Ray",
+      "tier": 3,
+      "sector": "devtools",
+      "github": [
+        "ray-project",
+        "anyscale"
+      ],
+      "domains": [
+        "ray.io",
+        "docs.ray.io",
+        "anyscale.com"
+      ]
+    },
+    {
+      "key": "eleutherai",
+      "name": "EleutherAI",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "eleutherai"
+      ],
+      "domains": [
+        "eleuther.ai",
+        "blog.eleuther.ai"
+      ]
+    },
+    {
+      "key": "black-forest-labs",
+      "name": "Black Forest Labs",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "black-forest-labs"
+      ],
+      "domains": [
+        "bfl.ai",
+        "bfl.ml"
+      ]
+    },
+    {
+      "key": "nous-research",
+      "name": "Nous Research",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "nousresearch"
+      ],
+      "domains": [
+        "nousresearch.com"
+      ]
+    },
+    {
+      "key": "notion",
+      "name": "Notion",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "makenotion"
+      ],
+      "domains": [
+        "notion.so",
+        "notion.com",
+        "developers.notion.com"
+      ]
+    },
+    {
+      "key": "slack",
+      "name": "Slack",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "slackapi"
+      ],
+      "domains": [
+        "slack.com",
+        "api.slack.com"
+      ]
+    },
+    {
+      "key": "figma",
+      "name": "Figma",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "figma"
+      ],
+      "domains": [
+        "figma.com"
+      ]
+    },
+    {
+      "key": "linear",
+      "name": "Linear",
+      "tier": 3,
+      "sector": "other",
+      "github": [
+        "linear"
+      ],
+      "domains": [
+        "linear.app"
+      ]
+    },
+    {
+      "key": "karpathy",
+      "name": "Andrej Karpathy",
+      "tier": 3,
+      "sector": "person",
+      "github": [
+        "karpathy"
+      ],
+      "domains": [
+        "karpathy.ai"
+      ],
+      "person": true
+    },
+    {
+      "key": "simon-willison",
+      "name": "Simon Willison",
+      "tier": 3,
+      "sector": "person",
+      "github": [
+        "simonw"
+      ],
+      "domains": [
+        "simonwillison.net",
+        "datasette.io"
+      ],
+      "person": true
+    },
+    {
+      "key": "ggerganov",
+      "name": "Georgi Gerganov",
+      "tier": 3,
+      "sector": "person",
+      "github": [
+        "ggerganov"
+      ],
+      "domains": [],
+      "person": true
+    },
+    {
+      "key": "lucidrains",
+      "name": "Phil Wang",
+      "tier": 3,
+      "sector": "person",
+      "github": [
+        "lucidrains"
+      ],
+      "domains": [],
+      "person": true
+    },
+    {
+      "key": "unsloth",
+      "name": "Unsloth",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "unslothai"
+      ],
+      "domains": [
+        "unsloth.ai"
+      ]
+    },
+    {
+      "key": "brave",
+      "name": "Brave",
+      "tier": 3,
+      "sector": "big-tech",
+      "github": [
+        "brave"
+      ],
+      "domains": [
+        "brave.com"
+      ]
+    },
+    {
+      "key": "jina-ai",
+      "name": "Jina AI",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "jina-ai"
+      ],
+      "domains": [
+        "jina.ai"
+      ]
+    },
+    {
+      "key": "nomic",
+      "name": "Nomic",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "nomic-ai"
+      ],
+      "domains": [
+        "nomic.ai"
+      ]
+    },
+    {
+      "key": "baai",
+      "name": "BAAI",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "flagopen"
+      ],
+      "domains": [
+        "baai.ac.cn"
+      ]
+    }
+  ],
+  "platformHosts": [
+    "github.com",
+    "huggingface.co",
+    "hf.co",
+    "dev.to",
+    "reddit.com",
+    "youtube.com",
+    "npmjs.com",
+    "smithery.ai",
+    "producthunt.com",
+    "lobste.rs",
+    "news.ycombinator.com",
+    "medium.com",
+    "substack.com",
+    "x.com",
+    "bsky.app",
+    "gitlab.com"
   ]
 }

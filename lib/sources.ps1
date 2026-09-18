@@ -227,7 +227,8 @@ function Get-HnItems {
 function Get-RssItems {
     param($Source, $Defaults)
     $max = [int](Get-Prop $Source 'maxItems' (Get-Prop $Defaults 'maxItems' 25))
-    $raw = Invoke-Http -Url $Source.url -TimeoutSec (Get-Prop $Defaults 'timeoutSec' 30) -UserAgent (Get-Prop $Defaults 'userAgent' 'jbelly-radar/1.0')
+    $ua  = Get-Prop $Source 'userAgent' (Get-Prop $Defaults 'userAgent' 'jbelly-radar/1.0')
+    $raw = Invoke-Http -Url $Source.url -TimeoutSec (Get-Prop $Defaults 'timeoutSec' 30) -UserAgent $ua
     $xml = New-Object System.Xml.XmlDocument
     $xml.PreserveWhitespace = $false
     $xml.LoadXml(($raw -replace '^[\s﻿]*<\?xml[^>]*\?>', '<?xml version="1.0" encoding="utf-8"?>'))
@@ -272,9 +273,83 @@ function Get-RssItems {
             -Title (ConvertTo-PlainText $titleNode.InnerText 180) -Url $link.Trim() `
             -Summary $desc -Author $author -Published $pub -Tags $cats
         $items.Add($item)
-        if ($items.Count -ge $max) { break }
     }
-    return $items
+    # A changelog feed can carry a thousand entries and not every feed is
+    # newest-first; sort by date (undated last) before taking the cap.
+    $sorted = @($items | Sort-Object -Property @{ Expression = { if ($_.published) { $_.published } else { '' } }; Descending = $true })
+    return @($sorted | Select-Object -First $max)
+}
+
+# -- kind: json-api -----------------------------------------------------------
+# A public JSON endpoint plus a field map in config. Paths are dot-separated;
+# a segment in [brackets] may itself contain dots ("_meta.[io.x/official].at");
+# "a|b" tries a then b; a numeric segment indexes an array. Nothing here knows
+# any particular API, so a new JSON source is configuration only.
+
+function Get-JsonPath {
+    param($Object, [string]$Path)
+    if ($null -eq $Object -or -not $Path) { return $null }
+    foreach ($alt in ($Path -split '\|')) {
+        $cur = $Object
+        $ok = $true
+        foreach ($seg in [regex]::Matches($alt.Trim(), '\[[^\]]+\]|[^.]+')) {
+            $name = $seg.Value.Trim('[', ']')
+            if ($null -eq $cur) { $ok = $false; break }
+            if ($cur -is [System.Array] -or $cur -is [System.Collections.IList]) {
+                $idx = 0
+                if ([int]::TryParse($name, [ref]$idx) -and $idx -lt $cur.Count) { $cur = $cur[$idx] } else { $ok = $false; break }
+            }
+            elseif ($cur.PSObject -and $cur.PSObject.Properties[$name]) { $cur = $cur.PSObject.Properties[$name].Value }
+            else { $ok = $false; break }
+        }
+        if ($ok -and $null -ne $cur -and "$cur" -ne '') { return $cur }
+    }
+    return $null
+}
+
+function Get-JsonApiItems {
+    param($Source, $Defaults)
+    $max = [int](Get-Prop $Source 'maxItems' (Get-Prop $Defaults 'maxItems' 25))
+    $ua  = Get-Prop $Source 'userAgent' (Get-Prop $Defaults 'userAgent' 'jbelly-radar/1.0')
+    $raw = Invoke-Http -Url $Source.url -TimeoutSec (Get-Prop $Defaults 'timeoutSec' 30) -UserAgent $ua -Headers @{ 'Accept' = 'application/json' }
+    $data = $raw | ConvertFrom-Json
+    $itemPath = Get-Prop $Source 'itemPath' ''
+    $list = $data
+    if ($itemPath) { $list = Get-JsonPath -Object $data -Path $itemPath }
+    $map = $Source.map
+    $prefix = Get-Prop $map 'urlPrefix' ''
+    $split = Get-Prop $map 'authorSplit' ''
+
+    $items = New-Object System.Collections.Generic.List[object]
+    foreach ($row in @($list)) {
+        $title = Get-JsonPath -Object $row -Path (Get-Prop $map 'title' 'title')
+        $url   = Get-JsonPath -Object $row -Path (Get-Prop $map 'url' 'url')
+        if (-not $title -or -not $url) { continue }
+        $url = "$url"
+        if ($prefix -and $url -notmatch '^https?://') { $url = $prefix + $url }
+        $summary = Get-JsonPath -Object $row -Path (Get-Prop $map 'summary' 'description')
+        $author  = Get-JsonPath -Object $row -Path (Get-Prop $map 'author' 'author')
+        if ($author -and $split) { $author = ("$author" -split [regex]::Escape($split))[0] }
+        $metric  = Get-JsonPath -Object $row -Path (Get-Prop $map 'metric' '')
+        $pubRaw  = Get-JsonPath -Object $row -Path (Get-Prop $map 'published' '')
+        $tagsRaw = Get-JsonPath -Object $row -Path (Get-Prop $map 'tags' '')
+        $tags = @()
+        if ($tagsRaw -is [string]) { $tags = @($tagsRaw -split ',\s*') } elseif ($tagsRaw) { $tags = @($tagsRaw | ForEach-Object { "$_" }) }
+        $metricVal = $null
+        if ($null -ne $metric -and "$metric" -match '^\d+(\.\d+)?$') { $metricVal = [int64][double]$metric }
+
+        $item = New-RadarItem -SourceId $Source.id -SourceLabel $Source.label -Category $Source.category `
+            -Title (ConvertTo-PlainText "$title" 180) -Url $url `
+            -Summary (ConvertTo-PlainText "$summary") -Author "$author" `
+            -Metric $metricVal -MetricLabel (Get-Prop $map 'metricLabel' '') `
+            -Published (ConvertTo-Utc "$pubRaw") -Tags $tags
+        $items.Add($item)
+    }
+    $sorted = @($items | Sort-Object -Property @{ Expression = { if ($null -ne $_.metric) { [double]$_.metric } else { -1 } }; Descending = $true })
+    if ((Get-Prop $map 'order' 'metric') -eq 'published') {
+        $sorted = @($items | Sort-Object -Property @{ Expression = { if ($_.published) { $_.published } else { '' } }; Descending = $true })
+    }
+    return @($sorted | Select-Object -First $max)
 }
 
 # -- ranking: deterministic, explainable, no model ----------------------------
@@ -406,6 +481,10 @@ function Invoke-RadarSync {
     $statusPath = Join-Path $dataDir 'status.json'
     $enabled = @($config.sources | Where-Object { Get-Prop $_ 'enabled' $true })
     $done = 0
+    # the previous run, for stale-while-error retention
+    $previous = $null
+    $prevPath = Join-Path $dataDir 'trends.json'
+    if (Test-Path $prevPath) { try { $previous = Get-Content -Raw -Encoding UTF8 $prevPath | ConvertFrom-Json } catch { $previous = $null } }
     Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done 0 -Total $enabled.Count -Current '' -Sources @()
 
     foreach ($src in $config.sources) {
@@ -422,6 +501,7 @@ function Invoke-RadarSync {
                 'github-search' { $fetched = Get-GitHubItems   -Source $src -Defaults $config.defaults }
                 'hn'            { $fetched = Get-HnItems       -Source $src -Defaults $config.defaults }
                 'rss'           { $fetched = Get-RssItems      -Source $src -Defaults $config.defaults }
+                'json-api'      { $fetched = Get-JsonApiItems  -Source $src -Defaults $config.defaults }
                 default         { throw "unknown source kind '$($src.kind)' -- add a fetcher in lib/sources.ps1" }
             }
             $sw.Stop()
@@ -447,8 +527,16 @@ function Invoke-RadarSync {
         catch {
             $sw.Stop()
             $msg = $_.Exception.Message
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'failed'; count = 0; message = $msg; ms = [int]$sw.ElapsedMilliseconds })
-            if (-not $Quiet) { Write-Host ("  {0,-22} FAILED  {1}" -f $src.id, $msg) -ForegroundColor DarkRed }
+            # Stale-while-error: a feed that answers 429 once must not vanish from
+            # the radar for a whole cycle. Its items from the previous run are kept
+            # and the source is reported as stale, not failed, when there were any.
+            $kept = @()
+            if ($previous -and $previous.items) { $kept = @($previous.items | Where-Object { $_.sourceId -eq $src.id }) }
+            foreach ($k in $kept) { $all.Add($k) }
+            $status = 'failed'
+            if ($kept.Count -gt 0) { $status = 'stale' }
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $kept.Count; message = $msg; ms = [int]$sw.ElapsedMilliseconds })
+            if (-not $Quiet) { Write-Host ("  {0,-22} {1}  {2}" -f $src.id, $status.ToUpper(), $msg) -ForegroundColor DarkRed }
         }
         $done++
     }

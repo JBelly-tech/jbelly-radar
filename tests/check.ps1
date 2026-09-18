@@ -35,7 +35,7 @@ else {
     try { $config = Read-Utf8 $configPath | ConvertFrom-Json } catch { $fail.Add("config/sources.json is not valid JSON: $($_.Exception.Message)") }
 
     if ($config) {
-        $knownKinds = @('skills-sh', 'github-search', 'hn', 'rss')
+        $knownKinds = @('skills-sh', 'github-search', 'hn', 'rss', 'json-api')
         $ids = @{}
         foreach ($s in $config.sources) {
             $checks++
@@ -48,6 +48,10 @@ else {
                 $ids[$s.id] = $true
             }
             if ($s.kind -eq 'rss' -and -not $s.url) { $fail.Add("rss source without a url: $($s.id)") }
+            if ($s.kind -eq 'json-api') {
+                if (-not $s.url) { $fail.Add("json-api source without a url: $($s.id)") }
+                if (-not $s.PSObject.Properties['map'] -or -not $s.map.title -or -not $s.map.url) { $fail.Add("json-api source '$($s.id)' needs map.title and map.url") }
+            }
             foreach ($rx in 'requireMatch', 'excludeMatch') {
                 if ($s.PSObject.Properties[$rx] -and $s.$rx) {
                     try { [void][regex]::new($s.$rx) } catch { $fail.Add("invalid $rx regex in '$($s.id)': $($_.Exception.Message)") }

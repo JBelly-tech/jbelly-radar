@@ -1,11 +1,13 @@
 {
   "version": 1,
-  "$comment": "Add a source = add an object here. No code change as long as 'kind' is one of: skills-sh | github-search | hn | rss. See README.md > Adding a source.",
+  "$comment": "Add a source = add an object here. No code change as long as kind is one of: skills-sh | github-search | hn | rss | json-api. See README.md > Adding a source.",
   "defaults": {
     "timeoutSec": 30,
     "maxItems": 25,
     "userAgent": "jbelly-radar/1.0 (local research dashboard)",
-    "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change."
+    "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change.",
+    "orgLookupsPerSync": 20,
+    "$publisher": "An informational $publisher key names the organisation behind an official channel; attribution itself comes from config/publishers.json (login or domain), never from this key."
   },
   "sources": [
     {
@@ -208,6 +210,434 @@
       "enabled": true,
       "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=20",
       "maxItems": 20
+    },
+    {
+      "id": "cloudflare-blog",
+      "label": "Cloudflare · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://blog.cloudflare.com/rss/",
+      "maxItems": 12,
+      "$publisher": "Cloudflare"
+    },
+    {
+      "id": "openai-news",
+      "label": "OpenAI · news",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://openai.com/news/rss.xml",
+      "maxItems": 15,
+      "$publisher": "OpenAI"
+    },
+    {
+      "id": "google-ai-blog",
+      "label": "Google · AI blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://blog.google/technology/ai/rss/",
+      "maxItems": 12,
+      "$publisher": "Google"
+    },
+    {
+      "id": "deepmind-blog",
+      "label": "Google DeepMind · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://deepmind.google/blog/rss.xml",
+      "maxItems": 10,
+      "$publisher": "Google"
+    },
+    {
+      "id": "github-blog-ai-ml",
+      "label": "GitHub · AI & ML blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://github.blog/ai-and-ml/feed/",
+      "maxItems": 10,
+      "$publisher": "GitHub"
+    },
+    {
+      "id": "aws-ml-blog",
+      "label": "AWS · machine learning blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+      "maxItems": 10,
+      "$publisher": "AWS"
+    },
+    {
+      "id": "meta-engineering",
+      "label": "Meta · engineering",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://engineering.fb.com/feed/",
+      "maxItems": 8,
+      "$publisher": "Meta"
+    },
+    {
+      "id": "nvidia-technical-blog",
+      "label": "NVIDIA · technical blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://developer.nvidia.com/blog/feed",
+      "maxItems": 12,
+      "$publisher": "NVIDIA",
+      "requireMatch": "(?i)\\b(ai|a\\.i\\.|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|sdk|api)\\b"
+    },
+    {
+      "id": "dotnet-blog",
+      "label": "Microsoft · .NET blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://devblogs.microsoft.com/dotnet/feed/",
+      "maxItems": 6,
+      "$publisher": "Microsoft"
+    },
+    {
+      "id": "stripe-blog",
+      "label": "Stripe · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://stripe.com/blog/feed.rss",
+      "maxItems": 6,
+      "$publisher": "Stripe"
+    },
+    {
+      "id": "supabase-blog",
+      "label": "Supabase · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://supabase.com/rss.xml",
+      "maxItems": 8,
+      "$publisher": "Supabase"
+    },
+    {
+      "id": "docker-blog",
+      "label": "Docker · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://www.docker.com/blog/feed/",
+      "maxItems": 6,
+      "$publisher": "Docker"
+    },
+    {
+      "id": "mistral-blog",
+      "label": "Mistral AI · blog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://mistral.ai/rss.xml",
+      "maxItems": 8,
+      "$publisher": "Mistral AI"
+    },
+    {
+      "id": "simonwillison-blog",
+      "label": "Simon Willison · weblog",
+      "kind": "rss",
+      "category": "news",
+      "enabled": true,
+      "url": "https://simonwillison.net/atom/everything/",
+      "maxItems": 10
+    },
+    {
+      "id": "claude-code-changelog",
+      "label": "Claude Code · changelog",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://code.claude.com/docs/en/changelog/rss.xml",
+      "maxItems": 10,
+      "$publisher": "Anthropic"
+    },
+    {
+      "id": "claude-platform-release-notes",
+      "label": "Claude platform · release notes",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://platform.claude.com/docs/en/release-notes/feed.xml",
+      "maxItems": 8,
+      "$publisher": "Anthropic"
+    },
+    {
+      "id": "gh-rel-claude-code",
+      "label": "GitHub releases · claude-code",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.com/anthropics/claude-code/releases.atom",
+      "maxItems": 6,
+      "$publisher": "Anthropic"
+    },
+    {
+      "id": "gh-rel-openai-codex",
+      "label": "GitHub releases · openai/codex",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.com/openai/codex/releases.atom",
+      "maxItems": 6,
+      "$publisher": "OpenAI"
+    },
+    {
+      "id": "gh-rel-vercel-ai",
+      "label": "GitHub releases · vercel/ai",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.com/vercel/ai/releases.atom",
+      "maxItems": 6,
+      "$publisher": "Vercel"
+    },
+    {
+      "id": "gh-rel-cloudflare-agents",
+      "label": "GitHub releases · cloudflare/agents",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.com/cloudflare/agents/releases.atom",
+      "maxItems": 6,
+      "$publisher": "Cloudflare"
+    },
+    {
+      "id": "gh-rel-mcp-servers",
+      "label": "GitHub releases · MCP servers",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.com/modelcontextprotocol/servers/releases.atom",
+      "maxItems": 6,
+      "$publisher": "Model Context Protocol"
+    },
+    {
+      "id": "cloudflare-changelog",
+      "label": "Cloudflare · developer changelog",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://developers.cloudflare.com/changelog/rss/index.xml",
+      "maxItems": 10,
+      "$publisher": "Cloudflare"
+    },
+    {
+      "id": "github-changelog",
+      "label": "GitHub · changelog",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://github.blog/changelog/feed/",
+      "maxItems": 10,
+      "$publisher": "GitHub"
+    },
+    {
+      "id": "vercel-changelog",
+      "label": "Vercel · changelog",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://vercel.com/atom",
+      "maxItems": 8,
+      "$publisher": "Vercel"
+    },
+    {
+      "id": "aws-whats-new",
+      "label": "AWS · what is new",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
+      "maxItems": 10,
+      "$publisher": "AWS",
+      "requireMatch": "(?i)\\b(ai|a\\.i\\.|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|sdk|api)\\b"
+    },
+    {
+      "id": "vscode-updates",
+      "label": "VS Code · release notes",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://code.visualstudio.com/feed.xml",
+      "maxItems": 4,
+      "$publisher": "Microsoft"
+    },
+    {
+      "id": "cursor-changelog",
+      "label": "Cursor · changelog",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://cursor.com/changelog/rss.xml",
+      "maxItems": 6,
+      "$publisher": "Cursor"
+    },
+    {
+      "id": "producthunt-ai",
+      "label": "Product Hunt · AI launches",
+      "kind": "rss",
+      "category": "release",
+      "enabled": true,
+      "url": "https://www.producthunt.com/feed?category=artificial-intelligence",
+      "maxItems": 15
+    },
+    {
+      "id": "reddit-ai-multireddit",
+      "label": "Reddit · LocalLLaMA + ClaudeAI + mcp + ML",
+      "kind": "rss",
+      "category": "discussion",
+      "enabled": true,
+      "url": "https://www.reddit.com/r/LocalLLaMA+ClaudeAI+mcp+MachineLearning/top/.rss?t=week&limit=50",
+      "maxItems": 20,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) jbelly-radar/1.0"
+    },
+    {
+      "id": "lobsters-ai",
+      "label": "Lobsters · ai",
+      "kind": "rss",
+      "category": "discussion",
+      "enabled": true,
+      "url": "https://lobste.rs/t/ai.rss",
+      "maxItems": 12
+    },
+    {
+      "id": "devto-top-ai",
+      "label": "dev.to · top AI this week",
+      "kind": "json-api",
+      "category": "discussion",
+      "enabled": true,
+      "url": "https://dev.to/api/articles?tag=ai&top=7&per_page=30",
+      "itemPath": "",
+      "maxItems": 15,
+      "map": {
+        "title": "title",
+        "url": "url",
+        "summary": "description",
+        "author": "user.name|user.username",
+        "metric": "public_reactions_count",
+        "metricLabel": "reactions",
+        "published": "published_timestamp",
+        "tags": "tag_list"
+      }
+    },
+    {
+      "id": "mcp-official-registry",
+      "label": "MCP · official registry",
+      "kind": "json-api",
+      "category": "repo",
+      "enabled": true,
+      "url": "https://registry.modelcontextprotocol.io/v0/servers?limit=50&version=latest",
+      "itemPath": "servers",
+      "maxItems": 25,
+      "map": {
+        "title": "server.title|server.name",
+        "url": "server.repository.url|server.websiteUrl|server.remotes.0.url",
+        "summary": "server.description",
+        "author": "server.name",
+        "authorSplit": "/",
+        "published": "_meta.[io.modelcontextprotocol.registry/official].publishedAt|_meta.[io.modelcontextprotocol.registry/official].updatedAt",
+        "order": "published"
+      }
+    },
+    {
+      "id": "smithery-registry",
+      "label": "Smithery · MCP registry",
+      "kind": "json-api",
+      "category": "repo",
+      "enabled": true,
+      "url": "https://registry.smithery.ai/servers?pageSize=50",
+      "itemPath": "servers",
+      "maxItems": 20,
+      "map": {
+        "title": "displayName|qualifiedName",
+        "url": "qualifiedName",
+        "urlPrefix": "https://smithery.ai/server/",
+        "summary": "description",
+        "author": "namespace",
+        "metric": "useCount",
+        "metricLabel": "uses",
+        "published": "createdAt"
+      }
+    },
+    {
+      "id": "npm-mcp-packages",
+      "label": "npm · mcp packages",
+      "kind": "json-api",
+      "category": "repo",
+      "enabled": true,
+      "url": "https://registry.npmjs.org/-/v1/search?text=keywords:mcp&size=50&popularity=1.0",
+      "itemPath": "objects",
+      "maxItems": 20,
+      "map": {
+        "title": "package.name",
+        "url": "package.links.npm|package.links.repository",
+        "summary": "package.description",
+        "author": "package.publisher.username",
+        "metric": "downloads.weekly",
+        "metricLabel": "weekly downloads",
+        "published": "package.date",
+        "tags": "package.keywords"
+      }
+    },
+    {
+      "id": "hf-models-trending",
+      "label": "Hugging Face · trending models",
+      "kind": "json-api",
+      "category": "repo",
+      "enabled": true,
+      "url": "https://huggingface.co/api/models?sort=trendingScore&limit=20",
+      "itemPath": "",
+      "maxItems": 20,
+      "map": {
+        "title": "id",
+        "url": "id",
+        "urlPrefix": "https://huggingface.co/",
+        "author": "id",
+        "authorSplit": "/",
+        "metric": "likes",
+        "metricLabel": "likes",
+        "published": "createdAt",
+        "tags": "tags"
+      }
+    },
+    {
+      "id": "hf-daily-papers",
+      "label": "Hugging Face · daily papers",
+      "kind": "json-api",
+      "category": "research",
+      "enabled": true,
+      "url": "https://huggingface.co/api/daily_papers?limit=20",
+      "itemPath": "",
+      "maxItems": 20,
+      "map": {
+        "title": "paper.title|title",
+        "url": "paper.id",
+        "urlPrefix": "https://huggingface.co/papers/",
+        "summary": "paper.summary|summary",
+        "author": "submittedBy.fullname",
+        "metric": "paper.upvotes",
+        "metricLabel": "upvotes",
+        "published": "paper.publishedAt|publishedAt"
+      }
+    },
+    {
+      "id": "arxiv-cs-cl",
+      "label": "arXiv · cs.CL",
+      "kind": "rss",
+      "category": "research",
+      "enabled": true,
+      "url": "https://rss.arxiv.org/rss/cs.CL",
+      "maxItems": 15
     }
   ],
   "heat": {
@@ -236,6 +666,10 @@
       },
       "research": {
         "halfLifeDays": 7,
+        "metricCeiling": 1
+      },
+      "release": {
+        "halfLifeDays": 5,
         "metricCeiling": 1
       }
     },

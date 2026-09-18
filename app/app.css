@@ -162,6 +162,7 @@ button { font: inherit; color: inherit; }
 .health__dot--ok { background: var(--success); }
 .health__dot--empty { background: var(--warning); }
 .health__dot--failed { background: var(--destructive); }
+.health__dot--stale { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in oklch, var(--warning) 30%, transparent); }
 .health__dot--disabled { background: var(--muted-foreground); }
 .health__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .health__n { margin-inline-start: auto; font-family: var(--font-mono); font-size: 11px; color: var(--sidebar-muted); font-variant-numeric: tabular-nums; }

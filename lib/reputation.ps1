@@ -122,15 +122,25 @@ function Set-RadarPublishers {
             $owner = ($it.author -split '/')[0].ToLowerInvariant()   # skills.sh items carry owner/repo as author
         }
 
-        # 1. curated list, by login then by domain
+        # 1. curated list, by login then by domain. On a hosting platform the host
+        #    says nothing about the author: github.com/someone is not GitHub's work,
+        #    huggingface.co/someone is not Hugging Face's. There the path owner is
+        #    the only signal, and only an exact login match counts.
         $entry = $null
+        $hostName = Get-HostName -Url $it.url
+        $isPlatform = $false
+        foreach ($ph in @($Publishers.platformHosts)) { if ($hostName -eq $ph -or $hostName.EndsWith('.' + $ph)) { $isPlatform = $true; break } }
+        if (-not $owner -and $isPlatform) {
+            try { $segs = ([uri]$it.url).AbsolutePath.Trim('/').Split('/'); if ($segs.Count -ge 2 -and $segs[0]) { $owner = $segs[0].ToLowerInvariant() } } catch { }
+        }
         if ($owner -and $index.byLogin.ContainsKey($owner)) { $entry = $index.byLogin[$owner] }
-        if (-not $entry) { $entry = Find-DomainPublisher -HostName (Get-HostName -Url $it.url) -Index $index }
+        if (-not $entry -and -not $isPlatform) { $entry = Find-DomainPublisher -HostName $hostName -Index $index }
         if ($entry) {
             $pub = [pscustomobject]@{ key = $entry.key; name = $entry.name; tier = [int]$entry.tier; sector = "$(Get-Prop $entry 'sector' '')"; verified = $true; followers = $null }
         }
-        # 2. GitHub's record for an unlisted repository owner
-        elseif ($owner) {
+        # 2. GitHub's record for an unlisted repository owner (GitHub URLs only —
+        #    a Hugging Face namespace is not a GitHub login)
+        elseif ($owner -and (Get-GitHubOwner -Url $it.url)) {
             $rec = $null
             if ($cache.ContainsKey($owner)) {
                 $rec = $cache[$owner]

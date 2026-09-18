@@ -13,6 +13,8 @@
   var qTheme = qs.get('theme'), qLang = qs.get('lang');
   if (qTheme === 'light' || qTheme === 'dark') store.set('theme', qTheme);
   if (qLang === 'ar' || qLang === 'en') store.set('lang', qLang);
+  // ?profile=skip suppresses the first-visit drawer — for screenshots and automation.
+  if (qs.get('profile') === 'skip') store.set('onboarded', true);
 
   var prefs = store.prefs();
   document.documentElement.classList.toggle('light', prefs.theme === 'light');

@@ -23,6 +23,9 @@ function Get-TaxonomyMatchers {
         $pattern = '(?<![\w])(' + ($parts -join '|') + ')(?![\w])'
         $matchers.Add([pscustomobject]@{
             tag   = $tech.tag
+            # scope "title": a word that is honest in a headline but appears in every
+            # abstract ("benchmark", "gpu") is only tested against the title.
+            scope = "$(Get-Prop $tech 'scope' 'all')"
             regex = New-Object System.Text.RegularExpressions.Regex($pattern, ([System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::CultureInvariant))
         })
     }
@@ -43,9 +46,12 @@ function Set-RadarTech {
 
     foreach ($it in $Items) {
         $hay = (("$($it.title) $($it.summary) " + (@($it.tags) -join ' ')).ToLowerInvariant())
+        $titleHay = ("$($it.title) " + (@($it.tags) -join ' ')).ToLowerInvariant()
         $scores = @{}
         foreach ($m in $matchers) {
-            $hits = $m.regex.Matches($hay)
+            $text = $hay
+            if ($m.scope -eq 'title') { $text = $titleHay }
+            $hits = $m.regex.Matches($text)
             if ($hits.Count -eq 0) { continue }
             $distinct = @{}
             foreach ($h in $hits) { $distinct[$h.Value.ToLowerInvariant()] = $true }
