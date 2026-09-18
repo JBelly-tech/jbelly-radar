@@ -76,6 +76,12 @@
   --heat-3: oklch(68% 0.14 68);
   --heat-4: oklch(80% 0.16 72);
   --heat-ink: oklch(17% 0.03 68);
+  /* text on tinted fills: on the dark surface the base colours already pass 4.5:1 */
+  --primary-ink: var(--primary);
+  --success-ink: var(--success);
+  --heat-ink-strong: var(--heat-4);
+  /* edge of every scope blip: 3.2:1 against --card */
+  --blip-edge: oklch(62% 0.01 250);
 
   /* elevation — nearly flat by design */
   --overlay: rgb(0 0 0 / 0.55);
@@ -135,11 +141,17 @@ html.light {
   --data-4: oklch(55% 0.02 250);
 
   /* heat on the light surface: step 4 is 4.1:1 against --background */
-  --heat-1: oklch(88% 0.05 75);
-  --heat-2: oklch(78% 0.10 70);
-  --heat-3: oklch(68% 0.14 64);
-  --heat-4: oklch(55% 0.15 58);
+  --heat-1: oklch(80% 0.07 75);
+  --heat-2: oklch(70% 0.12 70);
+  --heat-3: oklch(62% 0.14 64);
+  --heat-4: oklch(52% 0.15 58);
   --heat-ink: oklch(100% 0 0);
+  /* 11px text on an 18% tint of these needs darker ink than the fill colour */
+  --primary-ink: oklch(44% 0.13 62);
+  --success-ink: oklch(40% 0.13 155);
+  --heat-ink-strong: oklch(44% 0.15 58);
+  /* edge of every scope blip: 3.9:1 against --card */
+  --blip-edge: oklch(52% 0.01 250);
 
   --overlay: rgb(15 25 40 / 0.35);
   --shadow-xs: 0 1px 2px 0 rgb(15 25 40 / 0.06);

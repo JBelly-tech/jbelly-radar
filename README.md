@@ -2,10 +2,10 @@
 
 [![ci](https://github.com/mohammadJohar/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammadJohar/jbelly-radar/actions/workflows/ci.yml) · MIT · Windows PowerShell 5.1+ · no dependencies, no build step, no API key, no model call
 
-**A live, local trend radar for people who build with AI.** It reads 56 public
-sources — the official channels of Cloudflare, OpenAI, Anthropic, Google, GitHub,
+**A live, local trend radar for people who build with AI.** It reads 55 public
+sources (56 configured; VentureBeat ships disabled because it rate-limits) — the official channels of Cloudflare, OpenAI, Anthropic, Google, GitHub,
 AWS, Meta, NVIDIA, Microsoft, Vercel, Stripe and others, the agent-skills
-leaderboard, the MCP registries, Hacking News, Reddit, Lobsters, dev.to, Product
+leaderboard, the MCP registries, Hacker News, Reddit, Lobsters, dev.to, Product
 Hunt, Hugging Face, arXiv and the tech press — ranks everything with one
 explainable score, **highlights what notable organisations published**, and
 re-orders the feed around *your* business, *your* technologies and what you
@@ -23,7 +23,7 @@ looked at 26 products); nothing combines them, and nothing runs like this:
 
 | | |
 |---|---|
-| **Notable organisations rank up** | A reviewable tier list of 149 organisations (Cloudflare, Google, Anthropic … down to notable labs) plus GitHub's own *verified organisation* record for anyone not on it. A Cloudflare release and a weekend project with the same stars are not treated the same. [ADR 0003](docs/adr/0003-publisher-reputation.md) |
+| **Notable organisations rank up** | A reviewable tier list of 150 entries — 146 organisations, from Cloudflare, Google and Anthropic down to notable labs, plus 4 notable individuals as an opt-in tier 3 — plus GitHub's own *verified organisation* record for anyone not on it. A Cloudflare release and a weekend project with the same stars are not treated the same. [ADR 0003](docs/adr/0003-publisher-reputation.md) |
 | **Filter by technology and by business** | 46 technology tags assigned by deterministic keyword rules; 19 business verticals, each mapped to the technologies that matter for it, with one line of *why* — shown as advice, in English or Arabic. |
 | **Ordered by what you do** | Opens, saves, hides and dwell become decayed affinities in your browser. *For you* re-ranks with a score you can read term by term ("Cloudflare · tier 1 · matches mcp, agents · you open Hacker News often"); *Everything* stays pure heat. Nothing leaves the machine. [ADR 0004](docs/adr/0004-personal-score-is-client-side.md) |
 | **Live, not static** | The server re-syncs in the background, the page follows progress source by source, new signals merge in place and are marked *new since your last visit*. |
@@ -110,9 +110,9 @@ touched, so the feed can still surprise you. Every row can show its terms.
 
 ## Sources
 
-56, in six kinds of signal. All public, none needing a key; each one was
-fetched live before being admitted, and a failing source keeps its last items
-and is shown as *stale* rather than disappearing.
+56 configured, 55 enabled by default, in six kinds of signal. All public, none
+needing a key; each one was fetched live before being admitted, and a failing
+source keeps its last items and is shown as *stale* rather than disappearing.
 
 | Kind | Sources |
 |------|---------|
@@ -145,7 +145,7 @@ five that exist:
 | `kind` | Reads | Keys |
 |--------|-------|------|
 | `rss` | RSS 2.0 and Atom (so GitHub release feeds and arXiv work through the same path) | `url`, optional `userAgent` |
-| `json-api` | any public JSON endpoint, with a field map: `itemPath`, `map.title`, `map.url`, `map.summary`, `map.author`, `map.metric`, `map.published`, `map.tags`, `urlPrefix`, `authorSplit`; paths are dot-separated, `a\|b` tries alternatives, `[bracketed]` segments may contain dots | `url`, `itemPath`, `map` |
+| `json-api` | any public JSON endpoint, with a field map: `map.title`, `map.url` (required), `map.summary`, `map.author`, `map.metric`, `map.metricLabel`, `map.published`, `map.tags`, `map.urlPrefix`, `map.authorSplit`, `map.order` (`metric` or `published`); paths are dot-separated, `a\|b` tries alternatives, `[bracketed]` segments may contain dots, a number indexes an array | `url`, `map`, optional `itemPath` |
 | `github-search` | the GitHub repository search API | `query`, `sort`, `createdWithinDays`, `pushedWithinDays` |
 | `hn` | the Hacker News Algolia API | `query`, `minPoints`, `withinDays` |
 | `skills-sh` | the agent-skills leaderboard | `url`, `weeklyOrder` |
@@ -174,11 +174,11 @@ naming unknown technologies.
 
 ```
 jbelly-radar/
-├─ radar.ps1               entry: background sync, localhost server, /api/status, /api/sync
+├─ radar.ps1               entry: background sync, localhost server, /api/status, /api/sync, /api/data
 ├─ scripts/sync.ps1        headless sync (the same function the server runs)
 ├─ config/
 │  ├─ sources.json         56 sources, filters, heat weights and half-lives
-│  ├─ publishers.json      149 organisations with tiers, logins and domains
+│  ├─ publishers.json      150 entries (146 organisations, 4 individuals) with tiers, logins and domains
 │  └─ taxonomy.json        46 technologies, 19 business verticals, advice in EN + AR
 ├─ lib/
 │  ├─ sources.ps1          five fetchers, normalisation, dedupe, momentum, heat, status file
@@ -190,12 +190,13 @@ jbelly-radar/
 ├─ tests/
 │  ├─ check.ps1            parser, config, token and page-structure checks (static)
 │  ├─ run-harness.ps1      runs every browser harness headlessly against the server
-│  └─ harness/*.html       one harness per client module (326 assertions)
+│  └─ harness/*.html       five harnesses — i18n+icons, store, rank, live, scope (333 assertions)
+├─ design/personality.md   the product's own design choices
 ├─ docs/
 │  ├─ ARCHITECTURE.md      the contract every module is built against
 │  ├─ adr/                 decisions 0001–0004
 │  └─ research/            the landscape study
-└─ data/                   generated, git-ignored: trends.json, status.json, history/
+└─ data/                   generated, git-ignored: trends.json, trends.js, taxonomy.js, status.json, history/
 ```
 
 ## Design

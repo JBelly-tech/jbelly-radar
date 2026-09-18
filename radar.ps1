@@ -10,7 +10,7 @@
 #   .\radar.ps1 -NoOpen         do not launch a browser
 #
 # Sync runs in a child PowerShell process, so the server keeps answering while
-# 27 feeds are being read; the dashboard follows data\status.json for progress.
+# ~55 sources are being read; the dashboard follows data\status.json for progress.
 # The listener binds to localhost only. Nothing is exposed to the network.
 
 [CmdletBinding()]
@@ -37,9 +37,25 @@ $script:syncProc = $null
 $script:lastSyncStart = [datetime]::MinValue
 
 function Test-Syncing {
-    if ($null -eq $script:syncProc) { return $false }
-    if ($script:syncProc.HasExited) { $script:syncProc = $null; return $false }
-    return $true
+    if ($script:syncProc -and -not $script:syncProc.HasExited) { return $true }
+    $script:syncProc = $null
+    # a sync started elsewhere (Task Scheduler, a previous window) holds data\sync.lock
+    $lockPath = Join-Path $dataDir 'sync.lock'
+    if (Test-Path $lockPath) {
+        $ownerPid = 0
+        try { $ownerPid = [int](Get-Content -Raw $lockPath -ErrorAction Stop) } catch { }
+        if ($ownerPid -gt 0 -and (Get-Process -Id $ownerPid -ErrorAction SilentlyContinue)) { return $true }
+    }
+    return $false
+}
+
+# Read a file the sync may be replacing at this very moment: share everything,
+# never hold the handle longer than the read.
+function Read-SharedText {
+    param([string]$Path)
+    $fs = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+    try { $sr = New-Object System.IO.StreamReader($fs, [System.Text.Encoding]::UTF8); try { return $sr.ReadToEnd() } finally { $sr.Close() } }
+    finally { $fs.Close() }
 }
 
 function Start-BackgroundSync {
@@ -114,7 +130,7 @@ function Write-Text {
 function Get-StatusJson {
     $status = $null
     if (Test-Path $statusFile) {
-        try { $status = Get-Content -Raw -Encoding UTF8 $statusFile | ConvertFrom-Json } catch { $status = $null }
+        try { $status = (Read-SharedText $statusFile) | ConvertFrom-Json } catch { $status = $null }
     }
     if ($null -eq $status) { $status = [pscustomobject]@{ state = 'idle'; done = 0; total = 0; current = ''; sources = @() } }
     # The process is the truth about "running"; the file can lag by one write.
@@ -165,7 +181,7 @@ try {
             }
 
             if ($path -eq '/api/data') {
-                if (Test-Path $dataFile) { Write-Text $res 200 'application/json; charset=utf-8' ([System.IO.File]::ReadAllText($dataFile, [System.Text.Encoding]::UTF8)) }
+                if (Test-Path $dataFile) { Write-Text $res 200 'application/json; charset=utf-8' (Read-SharedText $dataFile) }
                 else { Write-Text $res 404 'application/json; charset=utf-8' '{"error":"no data yet - a sync is running or run scripts/sync.ps1"}' }
                 continue
             }
@@ -175,7 +191,7 @@ try {
             # Static file, confined to the project folder.
             $relative = $path.TrimStart('/').Replace('/', '\')
             $full = [System.IO.Path]::GetFullPath((Join-Path $root $relative))
-            if (-not $full.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path $full -PathType Leaf)) {
+            if (-not $full.StartsWith($root + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path $full -PathType Leaf)) {
                 Write-Text $res 404 'text/plain; charset=utf-8' 'not found'
                 continue
             }
@@ -184,7 +200,8 @@ try {
             $type = 'application/octet-stream'
             if ($mime.ContainsKey($ext)) { $type = $mime[$ext] }
 
-            $bytes = [System.IO.File]::ReadAllBytes($full)
+            $fsr = [System.IO.File]::Open($full, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+            try { $ms = New-Object System.IO.MemoryStream; $fsr.CopyTo($ms); $bytes = $ms.ToArray() } finally { $fsr.Close() }
             $res.StatusCode = 200
             $res.ContentType = $type
             $res.Headers['Cache-Control'] = 'no-store'

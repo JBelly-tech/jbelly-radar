@@ -9,7 +9,9 @@ notes keep it that way.
 powershell -ExecutionPolicy Bypass -File tests\check.ps1
 ```
 
-It must print `OK`. CI runs the same script on Windows.
+It must print `OK - n checks passed`. For a change under `app/js/`, also start
+`.\radar.ps1 -NoOpen -NoSync` and run `powershell -File tests\run-harness.ps1`.
+CI runs both, plus PSScriptAnalyzer at severity *Error*, on Windows.
 
 ## Adding a source
 

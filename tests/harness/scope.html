@@ -137,7 +137,7 @@
   ok('sr-only table has one row per blip', rows.length === blips().length, rows.length + ' vs ' + blips().length);
 
   var tabs = Array.prototype.every.call(blips(), function (g) {
-    return g.getAttribute('tabindex') === '0' && g.getAttribute('role') === 'button' && !!g.getAttribute('aria-label');
+    return (g.getAttribute('tabindex') === '0' || g.getAttribute('tabindex') === '-1') && g.getAttribute('role') === 'button' && !!g.getAttribute('aria-label');
   });
   ok('every blip is a focusable labelled button', tabs);
 

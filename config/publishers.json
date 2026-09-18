@@ -576,7 +576,8 @@
       "github": [
         "tencent",
         "tencentarc",
-        "tencent-hunyuan"
+        "tencent-hunyuan",
+        "tencentcloud"
       ],
       "domains": [
         "tencent.com",
@@ -596,7 +597,8 @@
         "bytedance",
         "bytedance-seed",
         "volcengine",
-        "trae-ai"
+        "trae-ai",
+        "larksuite"
       ],
       "domains": [
         "bytedance.com",
@@ -2084,6 +2086,18 @@
       "domains": [
         "baai.ac.cn"
       ]
+    },
+    {
+      "key": "openbmb",
+      "name": "OpenBMB",
+      "tier": 3,
+      "sector": "ai-lab",
+      "github": [
+        "openbmb"
+      ],
+      "domains": [
+        "openbmb.cn"
+      ]
     }
   ],
   "platformHosts": [
@@ -2103,5 +2117,9 @@
     "x.com",
     "bsky.app",
     "gitlab.com"
+  ],
+  "registryRepos": [
+    "modelcontextprotocol/registry",
+    "modelcontextprotocol/servers"
   ]
 }

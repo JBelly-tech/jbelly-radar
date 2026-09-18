@@ -33,7 +33,7 @@
       scope: 'Radar scope', scopeShowing: 'showing {n} of {total}',
       syncing: 'Syncing {done} of {total} — {current}', newSignals: '{n} new signals', live: 'live',
       offline: 'server unreachable — showing cached data', advice: 'Why it matters for {vertical}',
-      release: 'Releases', tech: 'Technology', allTech: 'All technologies'
+      release: 'Releases', tech: 'Technology', allTech: 'All technologies', openMenu: 'Open menu', closeMenu: 'Close menu', close: 'Close', switchLang: 'Switch language', switchTheme: 'Switch theme', timeRange: 'Time range', sortBy: 'Sort by', categories: 'Categories', techFilters: 'Technology filters', feedMode: 'Feed mode', summary: 'Summary', openLink: 'Open link', copyInstall: 'Copy install command', newBadge: 'new', srcBadge: 'src', heat: 'heat', 'st-failed': 'failed', 'st-stale': 'stale', 'st-empty': 'empty', 'st-disabled': 'off'
     },
     ar: {
       skip: 'تخطَّ إلى النتائج', tagline: 'رادار الترندات', signals: 'الإشارات', sourceHealth: 'حالة المصادر',
@@ -61,7 +61,7 @@
       scope: 'شاشة الرادار', scopeShowing: 'معروض {n} من {total}',
       syncing: 'عم يزامن {done} من {total} — {current}', newSignals: '{n} إشارة جديدة', live: 'مباشر',
       offline: 'السيرفر مش موصول — معروض آخر نسخة', advice: 'ليش بيهمّ {vertical}',
-      release: 'إصدارات', tech: 'التقنية', allTech: 'كل التقنيات'
+      release: 'إصدارات', tech: 'التقنية', allTech: 'كل التقنيات', openMenu: 'افتح القائمة', closeMenu: 'سكّر القائمة', close: 'إغلاق', switchLang: 'غيّر اللغة', switchTheme: 'غيّر المظهر', timeRange: 'الفترة الزمنية', sortBy: 'الترتيب', categories: 'الفئات', techFilters: 'فلاتر التقنية', feedMode: 'وضع العرض', summary: 'الملخّص', openLink: 'افتح الرابط', copyInstall: 'انسخ أمر التنصيب', newBadge: 'جديد', srcBadge: 'مصدر', heat: 'حرارة', 'st-failed': 'فشل', 'st-stale': 'قديم', 'st-empty': 'فاضي', 'st-disabled': 'مطفي'
     }
   };
 
@@ -103,6 +103,7 @@
       html.dir = i18n.lang === 'ar' ? 'rtl' : 'ltr';
       document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = i18n.t(el.getAttribute('data-i18n')); });
       document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.placeholder = i18n.t(el.getAttribute('data-i18n-ph')); });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-aria]'), function (el) { el.setAttribute('aria-label', i18n.t(el.getAttribute('data-i18n-aria'))); });
       try { localStorage.setItem(KEY, i18n.lang); } catch (e) { /* preference is per-session then */ }
       return i18n.lang;
     }

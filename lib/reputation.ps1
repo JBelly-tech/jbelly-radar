@@ -88,7 +88,16 @@ function Get-GitHubOrgRecord {
     if ($env:GITHUB_TOKEN) { $token = $env:GITHUB_TOKEN } elseif ($env:GH_TOKEN) { $token = $env:GH_TOKEN }
     if ($token) { $headers['Authorization'] = "Bearer $token" }
     try {
-        $r = Invoke-RestMethod -Uri "https://api.github.com/users/$Login" -Headers $headers -TimeoutSec $TimeoutSec -UserAgent 'jbelly-radar/1.0' -ErrorAction Stop
+        # /orgs carries is_verified; /users does not. Try the organisation record
+        # first and fall back to the user record for personal accounts.
+        $r = $null
+        try { $r = Invoke-RestMethod -Uri "https://api.github.com/orgs/$Login" -Headers $headers -TimeoutSec $TimeoutSec -UserAgent 'jbelly-radar/1.0' -ErrorAction Stop }
+        catch {
+            $status = 0
+            try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+            if ($status -ne 404) { throw }
+            $r = Invoke-RestMethod -Uri "https://api.github.com/users/$Login" -Headers $headers -TimeoutSec $TimeoutSec -UserAgent 'jbelly-radar/1.0' -ErrorAction Stop
+        }
         return [pscustomobject]@{
             login       = $Login
             type        = "$($r.type)"                                   # User | Organization
@@ -100,9 +109,14 @@ function Get-GitHubOrgRecord {
         }
     }
     catch {
-        # 404 (renamed / deleted) and 403 (rate limit) are both "unknown for now";
-        # cache the miss briefly so one dead login does not cost a lookup per sync.
-        return [pscustomobject]@{ login = $Login; type = ''; verified = $false; followers = 0; publicRepos = 0; name = $Login; checkedAt = [datetime]::UtcNow.ToString('o'); error = $_.Exception.Message }
+        # A 404 (renamed / deleted) is worth remembering for a week; a 403 (rate
+        # limit) or a network error only for an hour, or the miss would hide a real
+        # organisation for a month.
+        $status = 0
+        try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+        $ttlHours = 1
+        if ($status -eq 404) { $ttlHours = 24 * 7 }
+        return [pscustomobject]@{ login = $Login; type = ''; verified = $false; followers = 0; publicRepos = 0; name = $Login; checkedAt = [datetime]::UtcNow.ToString('o'); error = $_.Exception.Message; ttlHours = $ttlHours }
     }
 }
 
@@ -133,6 +147,8 @@ function Set-RadarPublishers {
         if (-not $owner -and $isPlatform) {
             try { $segs = ([uri]$it.url).AbsolutePath.Trim('/').Split('/'); if ($segs.Count -ge 2 -and $segs[0]) { $owner = $segs[0].ToLowerInvariant() } } catch { }
         }
+        # a registry that links every entry to its own repository is not the author
+        foreach ($own in @($Publishers.registryRepos)) { if ($it.url -match ('^https?://github\.com/' + [regex]::Escape($own) + '(/|$)')) { $owner = '' } }
         if ($owner -and $index.byLogin.ContainsKey($owner)) { $entry = $index.byLogin[$owner] }
         if (-not $entry -and -not $isPlatform) { $entry = Find-DomainPublisher -HostName $hostName -Index $index }
         if ($entry) {
@@ -144,8 +160,11 @@ function Set-RadarPublishers {
             $rec = $null
             if ($cache.ContainsKey($owner)) {
                 $rec = $cache[$owner]
-                $age = ($now - (ConvertTo-Utc $rec.checkedAt)).TotalDays
-                if ($age -gt $CacheDays) { $rec = $null }
+                $ageHours = ($now - (ConvertTo-Utc $rec.checkedAt)).TotalHours
+                $ttl = [double]$CacheDays * 24
+                $recTtl = Get-Prop $rec 'ttlHours' $null
+                if ($null -ne $recTtl) { $ttl = [double]$recTtl }
+                if ($ageHours -gt $ttl) { $rec = $null }
             }
             if (-not $rec -and $lookups -lt $MaxLookups -and -not $seenThisRun.ContainsKey($owner)) {
                 $seenThisRun[$owner] = $true

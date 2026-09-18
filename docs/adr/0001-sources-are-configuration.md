@@ -28,7 +28,9 @@ No model is called anywhere in the pipeline.**
 - A source is an object: `id`, `label`, `kind`, `category`, plus the keys that
   kind accepts. Adding one is a JSON edit.
 - There are four kinds — `skills-sh`, `github-search`, `hn`, `rss` — chosen by
-  transport, not by site. `rss` parses RSS 2.0 and Atom through one XPath pass,
+  transport, not by site. *(Addendum 2026-09-18: a fifth transport, `json-api`,
+  reads any public JSON endpoint through a field map declared in the source's
+  config object — the same principle, one more transport.)* `rss` parses RSS 2.0 and Atom through one XPath pass,
   so an arXiv API query is an `rss` source with no extra code.
 - Filtering that would otherwise justify a special fetcher is configuration too:
   `requireMatch` and `excludeMatch` are regexes over title and summary, which is

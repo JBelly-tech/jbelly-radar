@@ -17,3 +17,4 @@ desktop.ini
 .vs/
 .idea/
 *.swp
+data/sync.lock

@@ -27,17 +27,17 @@
         <span class="sidebar__name">JBelly Radar</span>
         <span class="sidebar__tag" data-i18n="tagline">trend radar</span>
       </span>
-      <button class="btn btn--ghost btn--icon sidebar__close" id="sidebarClose" aria-label="Close menu">
+      <button class="btn btn--ghost btn--icon sidebar__close" id="sidebarClose" aria-label="Close menu" data-i18n-aria="closeMenu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
 
     <div class="sidebar__scroll">
       <p class="sidebar__label" data-i18n="signals">Signals</p>
-      <nav class="nav" id="catNav" aria-label="Categories"></nav>
+      <nav class="nav" id="catNav" aria-label="Categories" data-i18n-aria="categories"></nav>
 
       <p class="sidebar__label" data-i18n="tech">Technology</p>
-      <div class="chips" id="techChips" role="group" aria-label="Technology filters"></div>
+      <div class="chips" id="techChips" role="group" aria-label="Technology filters" data-i18n-aria="techFilters"></div>
 
       <p class="sidebar__label" data-i18n="sourceHealth">Source health</p>
       <div class="health" id="healthList"></div>
@@ -49,7 +49,7 @@
   <div class="main">
 
     <header class="header">
-      <button class="btn btn--ghost btn--icon" id="menuBtn" aria-label="Open menu" style="display:none">
+      <button class="btn btn--ghost btn--icon" id="menuBtn" aria-label="Open menu" data-i18n-aria="openMenu" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
 
@@ -60,19 +60,19 @@
         <kbd>Ctrl K</kbd>
       </label>
 
-      <div class="pill" id="modeToggle" role="tablist" aria-label="Feed mode">
-        <button class="pill__tab" role="tab" data-mode="foryou" aria-selected="false" data-i18n="forYou">For you</button>
-        <button class="pill__tab" role="tab" data-mode="all" aria-selected="true" data-i18n="everything">Everything</button>
+      <div class="pill" id="modeToggle" role="group" aria-label="Feed mode" data-i18n-aria="feedMode">
+        <button class="pill__tab" type="button" data-mode="foryou" aria-pressed="false" data-i18n="forYou">For you</button>
+        <button class="pill__tab" type="button" data-mode="all" aria-pressed="true" data-i18n="everything">Everything</button>
       </div>
 
-      <select class="select hide-sm" id="range" aria-label="Time range">
+      <select class="select hide-sm" id="range" aria-label="Time range" data-i18n-aria="timeRange">
         <option value="1" data-i18n="r24">Last 24 hours</option>
         <option value="7" data-i18n="r7">Last 7 days</option>
         <option value="30" selected data-i18n="r30">Last 30 days</option>
         <option value="0" data-i18n="rAll">All time</option>
       </select>
 
-      <select class="select hide-sm" id="sort" aria-label="Sort by">
+      <select class="select hide-sm" id="sort" aria-label="Sort by" data-i18n-aria="sortBy">
         <option value="auto" data-i18n="sHeat">Sort: heat</option>
         <option value="new" data-i18n="sNew">Sort: newest</option>
         <option value="momentum" data-i18n="sMom">Sort: momentum</option>
@@ -84,11 +84,11 @@
         <span class="hide-sm" data-i18n="profileTitle">Tune your radar</span>
       </button>
 
-      <button class="btn btn--ghost btn--icon" id="langBtn" aria-label="Switch language" title="العربية">
+      <button class="btn btn--ghost btn--icon" id="langBtn" aria-label="Switch language" data-i18n-aria="switchLang" title="العربية">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
       </button>
 
-      <button class="btn btn--ghost btn--icon" id="themeBtn" aria-label="Switch theme">
+      <button class="btn btn--ghost btn--icon" id="themeBtn" aria-label="Switch theme" data-i18n-aria="switchTheme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
       </button>
 
@@ -98,7 +98,8 @@
       </button>
     </header>
 
-    <div class="livebar" id="livebar" aria-live="polite">
+    <span class="sr-only" id="announcer" aria-live="polite"></span>
+    <div class="livebar" id="livebar">
       <span class="livebar__dot" aria-hidden="true"></span>
       <span class="livebar__text" id="liveText">—</span>
       <span class="livebar__track" id="liveTrack" hidden><span class="livebar__fill" id="liveFill" style="width:0%"></span></span>
@@ -124,7 +125,7 @@
           <div class="scope-card__body"><div id="scope"></div></div>
           <div class="scope-legend" id="scopeLegend"></div>
         </section>
-        <div class="kpi-stack" id="kpis" aria-label="Summary"></div>
+        <div class="kpi-stack" id="kpis" aria-label="Summary" data-i18n-aria="summary"></div>
       </div>
 
       <section class="card" id="notableCard" aria-labelledby="notableTitle" style="margin-bottom:16px">
@@ -195,7 +196,7 @@
 <aside class="drawer" id="profileDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
   <div class="drawer__head">
     <h2 id="drawerTitle" data-i18n="profileTitle">Tune your radar</h2>
-    <button class="btn btn--ghost btn--icon" id="drawerClose" aria-label="Close">
+    <button class="btn btn--ghost btn--icon" id="drawerClose" aria-label="Close" data-i18n-aria="close">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>
@@ -218,8 +219,13 @@
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
-<script src="../data/taxonomy.js"></script>
-<script src="../data/trends.js"></script>
+<script>
+  // Opened from disk: load the snapshots the last sync wrote. Served: skip the
+  // 500 KB parse, the page fetches data/trends.json and config/taxonomy.json.
+  if (location.protocol === 'file:') {
+    document.write('<script src="../data/taxonomy.js"><\/script><script src="../data/trends.js"><\/script>');
+  }
+</script>
 <script src="js/i18n.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/store.js"></script>

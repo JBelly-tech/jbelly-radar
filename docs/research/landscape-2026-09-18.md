@@ -42,7 +42,7 @@ it a file someone can read and argue with.
 | [Trendshift](https://trendshift.io/) | site | daily momentum + social mentions; paid *Featured* | per-item history (first seen, days on radar) — the metric baselines in `data/history/` |
 | [star-history.com](https://www.star-history.com/) | site | stars gained in a window | sparkline from our own snapshots |
 | [Product Hunt](https://www.producthunt.com/) | product | reputation-weighted votes, fixed daily cohort | the idea that a signal from a reputable source counts more |
-| [daily.dev](https://docs.daily.dev/feeds/) | product | learns from clicks and upvotes, server-side | *For you / Everything* as explicit views; hides apply only to *For you* |
+| [daily.dev](https://docs.daily.dev/feeds/) | product | learns from clicks and upvotes, server-side | *For you / Everything* as explicit views; hides apply in both views, only the ordering is personal |
 | [Feedly AI (Leo)](https://feedly.com/ai) | product | pre-trained models, "why chosen" labels | *Why this is here* on every personalised row |
 | [Hacker News](http://www.righto.com/2013/11/how-hacker-news-ranking-really-works.html) | site | `(P−1)/(T+2)^1.8` with penalties | the decay family behind *heat*; HN itself is a source |
 | [Hugging Face Trending](https://huggingface.co/papers/trending) | site | upvotes + recency; undisclosed `trendingScore` | trending models and daily papers as keyless sources; organisation as a navigation axis |

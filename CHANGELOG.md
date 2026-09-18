@@ -10,7 +10,7 @@ The radar becomes live, personal and organisation-aware.
 
 ### Added
 
-- **Publisher reputation** — `config/publishers.json`, 149 organisations in
+- **Publisher reputation** — `config/publishers.json`, 146 organisations in
   three tiers with GitHub logins and web domains; live GitHub organisation
   lookup (verified / followers) for owners not on the list, cached 30 days;
   `platformHosts` so a hosting platform is never mistaken for the author.
@@ -43,8 +43,9 @@ The radar becomes live, personal and organisation-aware.
   `userAgent`; newest-first capping for thousand-entry changelog feeds;
   stale-while-error retention (a source that fails keeps its last items and is
   shown as *stale*).
-- **Client modules** under `app/js/` with a browser harness each (326
-  assertions) and `tests/run-harness.ps1` to run them headlessly.
+- **Client modules** under `app/js/`, with browser harnesses for i18n/icons,
+  store, rank, live and scope (333 assertions) and `tests/run-harness.ps1` to
+  run them headlessly.
 - `docs/ARCHITECTURE.md` (the module contract), ADR 0003 and 0004, and the
   landscape study in `docs/research/`.
 

@@ -25,8 +25,10 @@ the browser's `localStorage` and is computed on the page.**
   `0.45·heat + 0.20·reputation + 0.20·relevance + 0.15·affinity + explore`,
   and every row can show its terms as words ("Cloudflare · tier 1 · matches
   mcp, agents · you open Hacker News often").
-- *Everything* mode ignores the profile and the behaviour entirely and sorts
-  by heat. The user is never locked inside the personalised view.
+- *Everything* mode ignores the profile and the behaviour for **ordering** and
+  sorts by heat; hidden items and the *only notable organisations* switch still
+  filter the list in both modes. The user is never locked inside the
+  personalised view.
 - No cookie, no account, no telemetry. `export()` and `import()` exist so the
   profile can move between machines by hand.
 

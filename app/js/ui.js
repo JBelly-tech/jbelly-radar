@@ -32,6 +32,9 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
+  var undoToast = null;     // one restorable hide at a time (store keeps one candidate)
+  var drawerTimer = null;
+  var lastAnnounced = '';
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -108,7 +111,7 @@
   }
 
   function sparkline(values, w, h) {
-    var v = (values || []).filter(function (x) { return typeof x === 'number'; });
+    var v = (values || []).filter(function (x) { return typeof x === 'number' && isFinite(x); });
     if (v.length < 2) return '';
     var min = Math.min.apply(null, v), max = Math.max.apply(null, v);
     var span = (max - min) || 1;
@@ -206,11 +209,13 @@
     var el = $('healthList');
     if (!state.data) { el.innerHTML = ''; return; }
     el.innerHTML = state.data.sources.map(function (s) {
-      var title = s.status === 'failed' ? s.message : s.status + ' · ' + s.ms + 'ms';
+      var title = s.status === 'failed' || s.status === 'stale' ? s.message : s.status + ' · ' + s.ms + 'ms';
+      var tail = s.status === 'ok'
+        ? '<span class="health__n">' + s.count + '</span>'
+        : '<span class="health__status">' + esc(t('st-' + s.status)) + (s.status === 'stale' ? ' ' + s.count : '') + '</span>';
       return '<div class="health__row" title="' + esc(title) + '">' +
-        '<span class="health__dot health__dot--' + esc(s.status) + '"></span>' +
-        '<span class="health__name">' + esc(s.label) + '</span>' +
-        '<span class="health__n">' + (s.status === 'failed' ? '!' : s.count) + '</span></div>';
+        '<span class="health__dot health__dot--' + esc(s.status) + '" aria-hidden="true"></span>' +
+        '<span class="health__name">' + esc(s.label) + '</span>' + tail + '</div>';
     }).join('');
   }
 
@@ -219,16 +224,26 @@
   function renderMode() {
     var mode = prefs().mode;
     Array.prototype.forEach.call($('modeToggle').querySelectorAll('[data-mode]'), function (b) {
-      b.setAttribute('aria-selected', String(b.getAttribute('data-mode') === mode));
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === mode));
     });
     var sortEl = $('sort');
     var opt = sortEl.options[0];
     opt.textContent = mode === 'foryou' ? t('sHeat').replace(/:.*$/, ': ' + t('forYou').toLowerCase()) : t('sHeat');
   }
 
+  function announce(key) {
+    if (key === lastAnnounced) return;
+    lastAnnounced = key;
+    var a = $('announcer');
+    if (a) a.textContent = t(key);
+  }
+
   function renderLive() {
     var bar = $('livebar'), text = $('liveText'), track = $('liveTrack'), fill = $('liveFill'), right = $('liveRight');
     var s = state.status;
+    if (s && s.state === 'offline') announce('offline');
+    else if (s && s.state === 'syncing') announce('syncingSources');
+    else if (s && state.data) announce('syncedT');
     bar.classList.remove('livebar--syncing', 'livebar--offline');
     track.hidden = true;
     right.innerHTML = '';
@@ -267,11 +282,11 @@
 
     var chips = [];
     var newCount = Object.keys(newIdSet()).length;
-    if (newCount) chips.push('<span class="chip chip--count" data-act="filter-new">' + I.radar + esc(fmt('newSignals', { n: newCount })) + '</span>');
+    if (newCount) chips.push('<button class="chip chip--count" type="button" data-act="filter-new">' + I.radar + esc(fmt('newSignals', { n: newCount })) + '</button>');
     if (state.cat !== 'all') chips.push('<button class="chip" type="button" data-act="clear-cat">' + esc(t(state.cat)) + I.x + '</button>');
     activeTech().forEach(function (tg) { chips.push('<button class="chip" type="button" data-tech="' + esc(tg) + '" aria-pressed="true">' + esc(techLabel(tg)) + I.x + '</button>'); });
     if (state.q) chips.push('<button class="chip" type="button" data-act="clear-q">"' + esc(state.q) + '"' + I.x + '</button>');
-    if (prefs().profile.orgsOnly) chips.push('<span class="chip" aria-pressed="true">' + I.badgeCheck + esc(t('profileOrgs')) + '</span>');
+    if (prefs().profile.orgsOnly) chips.push('<button class="chip" type="button" data-act="profile">' + I.badgeCheck + esc(t('profileOrgs')) + '</button>');
     $('activeChips').innerHTML = chips.join('');
   }
 
@@ -288,14 +303,14 @@
     var failed = d.sources.filter(function (s) { return s.status === 'failed'; }).length;
 
     var perDay = [0, 0, 0, 0, 0, 0, 0];
-    items.forEach(function (i) { if (i.ageDays != null && i.ageDays < 7) perDay[6 - Math.floor(i.ageDays)]++; });
+    items.forEach(function (i) { if (i.ageDays != null && i.ageDays >= 0 && i.ageDays < 7) perDay[6 - Math.floor(i.ageDays)]++; });
     var buckets = [0, 0, 0, 0, 0];
     items.forEach(function (i) { buckets[Math.min(4, Math.floor(i.heat / 20))]++; });
 
     var cards = [
-      { label: t('kTotal'), value: items.length, spark: perDay, cap: t('cDay'), badge: '<span class="badge badge--outline">' + d.sources.length + ' src</span>' },
-      { label: t('kHot'), value: hot, spark: buckets, cap: t('cHeat'), badge: '<span class="badge badge--primary">heat 70+</span>' },
-      { label: t('newSince'), value: newCount, badge: '<span class="badge badge--new">' + I.radar + 'new</span>' },
+      { label: t('kTotal'), value: items.length, spark: perDay, cap: t('cDay'), badge: '<span class="badge badge--outline">' + d.sources.length + ' ' + esc(t('srcBadge')) + '</span>' },
+      { label: t('kHot'), value: hot, spark: buckets, cap: t('cHeat'), badge: '<span class="badge badge--primary">' + esc(t('heat')) + ' 70+</span>' },
+      { label: t('newSince'), value: newCount, badge: '<span class="badge badge--new">' + I.radar + esc(t('newBadge')) + '</span>' },
       { label: t('notable'), value: notable, badge: failed ? '<span class="badge badge--destructive">' + I.error + failed + '</span>' : '<span class="badge badge--success">' + I.ok + live + '/' + d.sources.length + '</span>' }
     ];
     $('kpis').innerHTML = cards.map(function (c) {
@@ -326,7 +341,7 @@
     });
     state.scopeMounted = true;
     $('scopeLegend').innerHTML =
-      '<span><span class="scope-legend__ramp"><i></i><i></i><i></i><i></i></span> heat</span>' +
+      '<span><span class="scope-legend__ramp"><i></i><i></i><i></i><i></i></span> ' + esc(t('heat')) + '</span>' +
       '<span><span class="scope-legend__dot"></span> ' + esc(t('notable')) + '</span>' +
       '<span><span class="scope-legend__new"></span> ' + esc(t('newSince')) + '</span>';
   }
@@ -353,7 +368,7 @@
       return '<article class="rail__card" data-id="' + esc(it.id) + '">' +
         '<div class="rail__org">' + I.badgeCheck + esc(it.publisher.name) + (it.publisher.tier ? ' <span class="badge badge--outline badge--sm">T' + it.publisher.tier + '</span>' : '') + '</div>' +
         '<div class="rail__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
-        '<div class="rail__meta"><span>' + esc(t(it.category)) + (it.ageDays != null ? ' · ' + esc(ago(it.ageDays)) : '') + '</span><span>heat ' + it.heat + '</span></div>' +
+        '<div class="rail__meta"><span>' + esc(t(it.category)) + (it.ageDays != null ? ' · ' + esc(ago(it.ageDays)) : '') + '</span><span>' + esc(t('heat')) + ' ' + it.heat + '</span></div>' +
       '</article>';
     }).join('');
   }
@@ -425,7 +440,7 @@
           '<div class="item__title-row">' +
             '<h3 class="item__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(title) + '</a></h3>' +
             tierBadge(it) +
-            (isNewRow ? '<span class="badge badge--new badge--sm">new</span>' : '') +
+            (isNewRow ? '<span class="badge badge--new badge--sm">' + esc(t('newBadge')) + '</span>' : '') +
           '</div>' +
           (it.summary ? '<p class="item__summary">' + esc(it.summary) + '</p>' : '') +
           '<div class="item__meta">' + meta.join('<span class="item__sep">·</span>') + '</div>' +
@@ -439,8 +454,8 @@
               '<div class="why__pop" hidden><strong>' + esc(t('whyRanked')) + '</strong><ul>' + why.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul></div></span>' : '') +
             '<button class="btn btn--ghost btn--icon" type="button" data-save="' + esc(it.id) + '" aria-label="' + esc(saved ? t('unsave') : t('save')) + '" aria-pressed="' + saved + '">' + (saved ? I.bookmarkFilled : I.bookmark) + '</button>' +
             '<button class="btn btn--ghost btn--icon" type="button" data-hide="' + esc(it.id) + '" aria-label="' + esc(t('hide')) + '">' + I.eyeOff + '</button>' +
-            (it.install && it.install.indexOf('npx') === 0 ? '<button class="btn btn--ghost btn--icon" type="button" data-copy="' + esc(it.install) + '" aria-label="Copy install command" title="' + esc(it.install) + '">' + I.copy + '</button>' : '') +
-            '<a class="btn btn--ghost btn--icon" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="Open source" data-open="' + esc(it.id) + '">' + I.link + '</a>' +
+            (it.install && it.install.indexOf('npx') === 0 ? '<button class="btn btn--ghost btn--icon" type="button" data-copy="' + esc(it.install) + '" aria-label="' + esc(t('copyInstall')) + '" title="' + esc(it.install) + '">' + I.copy + '</button>' : '') +
+            '<a class="btn btn--ghost btn--icon" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc(t('openLink')) + '" data-open="' + esc(it.id) + '">' + I.link + '</a>' +
           '</div>' +
         '</div>' +
       '</article>');
@@ -542,9 +557,14 @@
 
   function openDrawer() {
     if (!state.taxonomy) { toast('err', t('profileTitle'), t('offline')); return; }
+    if (!$('profileDrawer').hidden) return;
+    clearTimeout(drawerTimer);
     var p = prefs().profile;
     draft = { verticals: p.verticals.slice(), tech: p.tech.slice(), orgsOnly: !!p.orgsOnly };
     renderDrawer();
+    // aria-modal promises the rest is inert; make it so (Edge/Chrome support inert)
+    var shell = document.querySelector('.shell');
+    if (shell) shell.inert = true;
     $('profileDrawer').hidden = false;
     $('drawerBackdrop').classList.add('is-open');
     requestAnimationFrame(function () { $('profileDrawer').classList.add('is-open'); });
@@ -553,10 +573,25 @@
 
   function closeDrawer() {
     var d = $('profileDrawer');
+    if (d.hidden) return;
     d.classList.remove('is-open');
     $('drawerBackdrop').classList.remove('is-open');
-    setTimeout(function () { d.hidden = true; }, 260);
+    var shell = document.querySelector('.shell');
+    if (shell) shell.inert = false;
+    clearTimeout(drawerTimer);
+    drawerTimer = setTimeout(function () { d.hidden = true; }, 260);
     $('profileBtn').focus();
+  }
+
+  // Tab wraps inside the open dialog (inert covers pointer and reader, not the
+  // browser's own tab order in every engine).
+  function wrapFocus(e) {
+    var d = $('profileDrawer');
+    var f = d.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
   function renderDrawer() {
@@ -601,7 +636,15 @@
       (action ? '<button class="btn btn--outline" type="button" data-toast-act="' + esc(action.key) + '" style="margin-inline-start:auto">' + esc(action.label) + '</button>' : '');
     $('toasts').appendChild(el);
     if (action) el.querySelector('[data-toast-act]').addEventListener('click', function () { action.run(); el.remove(); });
-    setTimeout(function () { el.remove(); }, action ? 10000 : 4200);
+    setTimeout(function () { el.remove(); }, action ? 9000 : 4200);
+    return el;
+  }
+
+  // Re-rendering replaces the element that had focus; put focus back on its twin.
+  function refocus(selector, fallback) {
+    var again = selector && document.querySelector(selector);
+    if (again) { again.focus(); return; }
+    if (fallback) fallback.focus();
   }
 
   function copyText(text) {
@@ -694,14 +737,18 @@
         if (!s) return;
         if (store.isSaved(s.id)) store.unsave(s); else store.save(s);
         renderFeed(); renderSaved();
+        refocus('[data-save="' + s.id + '"]', $('feed'));
         return;
       }
       if ((el = e.target.closest('[data-hide]'))) {
         var h = itemById(el.getAttribute('data-hide'));
         if (!h) return;
+        if (undoToast) { undoToast.remove(); undoToast = null; }
         store.hide(h);
         renderAll();
-        toast('ok', t('hide'), h.title, { key: 'undo', label: t('undo'), run: function () { store.unhide(h.id); renderAll(); } });
+        undoToast = toast('ok', t('hide'), h.title, { key: 'undo', label: t('undo'), run: function () { store.unhide(h.id); undoToast = null; renderAll(); } });
+        var undoBtn = undoToast.querySelector('[data-toast-act]');
+        if (undoBtn) undoBtn.focus();
         return;
       }
       if ((el = e.target.closest('[data-why]'))) {
@@ -714,8 +761,10 @@
       }
       if ((el = e.target.closest('[data-tech]'))) {
         var tg = el.getAttribute('data-tech');
+        var inSidebar = !!el.closest('#techChips');
         if (state.tech[tg]) delete state.tech[tg]; else state.tech[tg] = true;
         renderTechChips(); renderFeed(); renderSubtitle(); renderAdvice();
+        refocus((inSidebar ? '#techChips ' : '') + '[data-tech="' + tg + '"]', $('feed'));
         return;
       }
       if ((el = e.target.closest('[data-dv]'))) { toggleIn(draft.verticals, el.getAttribute('data-dv')); renderDrawer(); return; }
@@ -753,6 +802,7 @@
         closeSidebar();
         return;
       }
+      if (!$('profileDrawer').hidden) { if (e.key === 'Tab') wrapFocus(e); return; }
       if (typing) return;
       if (e.key === '/') { e.preventDefault(); $('q').focus(); return; }
       if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) sync();
@@ -804,6 +854,8 @@
   R.ui = {
     init: function (opts) {
       state.taxonomy = opts && opts.taxonomy ? opts.taxonomy : null;
+      state.range = parseInt($('range').value, 10) || 0;
+      state.sort = $('sort').value || 'auto';
       bind();
       mountScope(false);
       renderAll();

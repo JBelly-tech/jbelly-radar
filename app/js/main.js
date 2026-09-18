@@ -20,12 +20,14 @@
   document.documentElement.classList.toggle('light', prefs.theme === 'light');
   R.i18n.setLang(prefs.lang);
 
+  // Served: the config file itself, so an edit shows without a sync. From disk:
+  // the snapshot the last sync wrote (data/taxonomy.js), if any.
   function loadTaxonomy() {
-    if (window.RADAR_TAXONOMY) return Promise.resolve(window.RADAR_TAXONOMY);
-    if (!R.live.isServed) return Promise.resolve(null);
+    var snapshot = window.RADAR_TAXONOMY || null;
+    if (!R.live.isServed) return Promise.resolve(snapshot);
     return fetch('../config/taxonomy.json', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+      .then(function (r) { return r.ok ? r.json() : snapshot; })
+      .catch(function () { return snapshot; });
   }
 
   loadTaxonomy().then(function (taxonomy) {
@@ -45,6 +47,9 @@
         }
       },
       onNewItems: function (newIds, payload) { R.ui.onNewItems(newIds, payload); }
+    }).then(function (payload) {
+      // from disk with no snapshot: live.start resolves with nothing rather than rejecting
+      if (!payload && !R.live.isServed && !window.RADAR_DATA) R.ui.noData('no snapshot');
     }).catch(function (e) {
       // A fresh checkout before the first sync, or a server that is not running.
       R.ui.noData(e && e.message ? e.message : String(e));

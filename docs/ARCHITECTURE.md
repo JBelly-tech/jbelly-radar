@@ -1,7 +1,7 @@
 # JBelly Radar — architecture (v2)
 
-> **Status: v2 in progress (2026-09-17).** v1 (sources → heat → static list) is
-> on `main`. This document is the contract v2 is built against: every module
+> **Status: v2 shipped (2026-09-18).** This document is the contract v2 was
+> built against and is kept current: every module
 > below names its file, its public surface and the shape it consumes. A module
 > that needs something not written here is a change to this file first.
 
@@ -27,8 +27,8 @@ per item) it is an optional, cached, opt-in enrichment — never the ranking.
 {
   "generatedAt": "2026-09-17T20:41:28Z",
   "durationMs": 31240,
-  "counts": { "total": 512, "skill": 155, "repo": 90, "news": 160, "discussion": 60, "research": 32, "release": 15 },
-  "sources": [ { "id": "techcrunch-ai", "label": "TechCrunch · AI", "category": "news", "status": "ok|empty|failed|disabled", "count": 20, "message": "", "ms": 333 } ],
+  "counts": { "total": 512, "skill": 155, "repo": 90, "news": 160, "discussion": 60, "research": 32, "release": 15, "notable": 264 },
+  "sources": [ { "id": "techcrunch-ai", "label": "TechCrunch · AI", "category": "news", "status": "ok|empty|stale|failed|disabled", "count": 20, "message": "", "ms": 333 } ],
   "publishers": { "cloudflare": { "name": "Cloudflare", "tier": 1, "sector": "cloud" } },   // only publishers seen this run
   "items": [
     {
@@ -66,7 +66,8 @@ and `serverTime` added. `POST /api/sync` returns `202 {started: bool, status}`.
 
 - Serves the project folder on `http://localhost:8477/`, static files only, path-confined.
 - Sync runs in a **child PowerShell process** (`scripts/sync.ps1 -Quiet`), so the
-  listener keeps answering during the 30–60 s a sync takes. One sync at a time.
+  listener keeps answering during the ~90 s a sync takes. One sync at a time,
+  across processes: `data/sync.lock` holds the pid of the running sync.
 - Sync fires: at start when the cache is older than `-StaleMinutes`; every
   `-Every` minutes (default 20) while running; on `POST /api/sync`.
 - Writes are atomic (temp file + rename), so a poll never reads a torn file.
@@ -145,7 +146,7 @@ properties only, Lucide-style inline SVG, no emoji.
 | File | Adds |
 |---|---|
 | `sources.ps1` | fetchers, normalisation, momentum, heat, status file (v1 + status) |
-| `reputation.ps1` | `Resolve-Publisher(item, publishers)` → matches author/org login and URL domain against `config/publishers.json`; optional live GitHub `is_verified` / followers when a token is present; caches org lookups in `data/history/orgs.json` |
+| `reputation.ps1` | `Set-RadarPublishers(items, publishers, cachePath, maxLookups)` → matches the repository owner login, the `owner/repo` a source reports, or the URL host against `config/publishers.json` (never the host on a `platformHosts` entry); for unlisted repository owners asks GitHub `/orgs/{login}` (then `/users`) for `is_verified` / followers, capped at `defaults.orgLookupsPerSync` (20) per sync, `GITHUB_TOKEN` optional to raise the rate limit; caches in `data/history/orgs.json` (30 days, 7 days for a 404, 1 hour for a rate-limit miss) |
 | `classify.ps1` | `Set-RadarTech(items, taxonomy)` → `item.tech` from keyword rules over title + summary + tags (word-boundary, lowercase, no regex characters in config) |
 
 `Invoke-RadarSync` order: fetch → dedupe → **classify → resolve publishers** →
@@ -157,7 +158,7 @@ momentum → heat → write.
 |---|---|
 | `config/sources.json` | sources, filters, heat weights |
 | `config/publishers.json` | `{ key, name, tier, sector, github: [logins], domains: [hosts] }` |
-| `config/taxonomy.json` | `technologies: [{tag,label,keywords[]}]`, `verticals: [{id,label,keywords[],technologies_that_matter:[{tag,why}]}]` |
+| `config/taxonomy.json` | `technologies: [{tag,label,label_ar,keywords[],scope?}]` (`scope: "title"` for words honest in a headline but present in every abstract), `verticals: [{id,label,label_ar,keywords[],technologies_that_matter:[{tag,why,why_ar}]}]` |
 
 The test suite validates all three: unknown kinds, duplicate ids, regexes that do
 not compile, taxonomy keywords containing regex characters, verticals naming a

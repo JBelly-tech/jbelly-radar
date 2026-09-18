@@ -1,6 +1,6 @@
 # lib/sources.ps1 — JBelly Radar fetchers + deterministic ranking.
 #
-# Four source kinds, one function each. Adding a SOURCE needs only a new object
+# Five source kinds, one function each. Adding a SOURCE needs only a new object
 # in config/sources.json; adding a KIND is the only thing that touches this file.
 #
 # No model call anywhere in this file, by design: fetch, normalise, rank, write.
@@ -48,6 +48,11 @@ function Get-CanonicalUrl {
     $u = $Url.Trim()
     $u = $u -replace '[?&](utm_[^=]+|ref|ref_src|source)=[^&]*', ''
     $u = $u -replace '[?&]+$', ''
+    # stripping a leading tracking parameter can leave '&' as the first separator
+    if ($u -notmatch '\?' -and $u -match '&') { $u = ([regex]'&').Replace($u, '?', 1) }
+    # the same paper arrives as arxiv.org/abs/ID, arxiv.org/abs/IDv2 and huggingface.co/papers/ID
+    $u = $u -replace '^(https?://arxiv\.org/abs/\d{4}\.\d{4,5})v\d+$', '$1'
+    $u = $u -replace '^https?://huggingface\.co/papers/(\d{4}\.\d{4,5})$', 'https://arxiv.org/abs/$1'
     return $u.TrimEnd('/')
 }
 
@@ -140,11 +145,16 @@ function Get-SkillsShItems {
         if ($m.Groups[5].Value.Trim()) { $weeks = @($m.Groups[5].Value -split ',' | ForEach-Object { [int64]$_.Trim() }) }
         $chrono = $weeks
         if ($newestFirst -and $weeks.Count -gt 1) { $chrono = @($weeks[($weeks.Count - 1)..0]) }
-        $owner = ($repo -split '/')[0]
+        # 'source' is owner/repo for GitHub-hosted skills and a bare domain otherwise
+        $isRepo = ($repo -match '^[^/]+/[^/]+$')
+        $owner = ''
+        $link = "https://$repo"
+        $author = ''
+        if ($isRepo) { $owner = ($repo -split '/')[0]; $link = "https://github.com/$repo"; $author = $repo }
         $item = New-RadarItem -SourceId $Source.id -SourceLabel $Source.label -Category $Source.category `
-            -Title $m.Groups[3].Value -Url "https://github.com/$repo" `
+            -Title $m.Groups[3].Value -Url $link `
             -Summary "Published by $repo on the skills directory." `
-            -Author $repo -Metric $installs -MetricLabel 'installs' `
+            -Author $author -Metric $installs -MetricLabel 'installs' `
             -Tags @('skill', $owner) -Spark $chrono -Install "npx skills add $repo" `
             -Key "skills.sh/$repo#$($m.Groups[2].Value)"
         $items.Add($item)
@@ -358,6 +368,12 @@ function Set-RadarHeat {
     param($Items, $HeatConfig)
     $w = $HeatConfig.weights
     foreach ($it in $Items) {
+        # an item kept from an earlier run (stale-while-error) carries that run's
+        # ageDays; recompute so it keeps cooling
+        if ($it.published) {
+            $p = ConvertTo-Utc "$($it.published)"
+            if ($p) { $it.ageDays = [math]::Round(([datetime]::UtcNow - $p).TotalDays, 2) }
+        }
         $cat = Get-Prop $HeatConfig.categories $it.category $null
         $halfLife = [double](Get-Prop $cat 'halfLifeDays' 7)
         $ceiling  = [double](Get-Prop $cat 'metricCeiling' 1)
@@ -414,11 +430,14 @@ function Set-RadarMomentum {
                     $weekly = (([double]$it.metric - [double]$old.metric) / $base) * (7.0 / $elapsed) * 100.0
                     $it.momentum = [math]::Round([math]::Max(-200.0, [math]::Min(200.0, $weekly)), 1)
                     $measured = $true
-                    $next[$it.id] = [pscustomobject]@{ metric = $it.metric; at = $now.ToString('o') }
+                    $next[$it.id] = [pscustomobject]@{ metric = $it.metric; at = $now.ToString('o'); momentum = $it.momentum }
                 }
                 else {
-                    # too young to measure against: carry the baseline forward untouched
+                    # too young to measure against: carry the baseline forward untouched,
+                    # and keep the last measured value so it survives until the next one
                     $next[$it.id] = $old
+                    $prevMomentum = Get-Prop $old 'momentum' $null
+                    if ($null -ne $prevMomentum) { $it.momentum = [double]$prevMomentum; $measured = $true }
                 }
             }
         }
@@ -465,7 +484,20 @@ function Write-RadarStatus {
     }
     $tmp = $Path + '.tmp'
     [System.IO.File]::WriteAllText($tmp, ($obj | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding($false)))
-    Move-Item -Path $tmp -Destination $Path -Force
+    Move-FileWithRetry -From $tmp -To $Path
+}
+
+# Move-Item over a file another process is reading fails on Windows; the server
+# reads these files between polls. Retry a few times, then fall back to a copy so
+# a progress-file hiccup can never abort a fetch.
+function Move-FileWithRetry {
+    param([string]$From, [string]$To, [int]$Attempts = 6)
+    for ($i = 1; $i -le $Attempts; $i++) {
+        try { Move-Item -Path $From -Destination $To -Force -ErrorAction Stop; return }
+        catch { Start-Sleep -Milliseconds (50 * $i) }
+    }
+    try { Copy-Item -Path $From -Destination $To -Force -ErrorAction Stop; Remove-Item -Path $From -Force -ErrorAction SilentlyContinue }
+    catch { }
 }
 
 function Invoke-RadarSync {
@@ -478,6 +510,24 @@ function Invoke-RadarSync {
 
     $dataDir = Join-Path $Root 'data'
     if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
+
+    # One sync at a time, across processes: a scheduled task and the server must
+    # not write the same files together. A stale lock (dead pid) is taken over.
+    $lockPath = Join-Path $dataDir 'sync.lock'
+    $lock = $null
+    try { $lock = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read) }
+    catch {
+        $ownerPid = 0
+        try { $ownerPid = [int](Get-Content -Raw $lockPath -ErrorAction Stop) } catch { }
+        $alive = $false
+        if ($ownerPid -gt 0) { $alive = [bool](Get-Process -Id $ownerPid -ErrorAction SilentlyContinue) }
+        if ($alive) { throw "another sync is running (pid $ownerPid)" }
+        Remove-Item -Path $lockPath -Force -ErrorAction SilentlyContinue
+        $lock = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)
+    }
+    $pidBytes = [System.Text.Encoding]::ASCII.GetBytes("$PID")
+    $lock.Write($pidBytes, 0, $pidBytes.Length); $lock.Flush()
+    try {
     $statusPath = Join-Path $dataDir 'status.json'
     $enabled = @($config.sources | Where-Object { Get-Prop $_ 'enabled' $true })
     $done = 0
@@ -492,9 +542,9 @@ function Invoke-RadarSync {
             $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'disabled'; count = 0; message = 'disabled in config'; ms = 0 })
             continue
         }
-        Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done $done -Total $enabled.Count -Current $src.label -Sources $health
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
         try {
+            try { Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done $done -Total $enabled.Count -Current $src.label -Sources $health } catch { }
             $fetched = $null
             switch ($src.kind) {
                 'skills-sh'     { $fetched = Get-SkillsShItems -Source $src -Defaults $config.defaults }
@@ -597,7 +647,7 @@ function Invoke-RadarSync {
     # Write to a temp file and rename, so a reader never sees a half-written file.
     $tmp = Join-Path $dataDir 'trends.json.tmp'
     [System.IO.File]::WriteAllText($tmp, $json, $utf8)
-    Move-Item -Path $tmp -Destination (Join-Path $dataDir 'trends.json') -Force
+    Move-FileWithRetry -From $tmp -To (Join-Path $dataDir 'trends.json')
     # trends.js exists so app/index.html also works when opened straight from disk
     # (file://), where fetch() of a local JSON file is blocked by the browser.
     [System.IO.File]::WriteAllText((Join-Path $dataDir 'trends.js'), "window.RADAR_DATA = $json;", $utf8)
@@ -609,4 +659,8 @@ function Invoke-RadarSync {
     Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $done -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt
 
     return $payload
+    }
+    finally {
+        if ($lock) { $lock.Close(); Remove-Item -Path $lockPath -Force -ErrorAction SilentlyContinue }
+    }
 }

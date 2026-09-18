@@ -32,6 +32,7 @@
 
 .pill { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--muted); }
 .pill__tab {
+  white-space: nowrap;
   height: 26px;
   padding-inline: 10px;
   border: 0;
@@ -64,7 +65,7 @@
   transition: background var(--duration) ease-out, border-color var(--duration) ease-out, color var(--duration) ease-out;
 }
 .chip:hover { background: var(--accent); color: var(--accent-foreground); }
-.chip[aria-pressed="true"] { background: color-mix(in oklch, var(--primary) 18%, transparent); border-color: color-mix(in oklch, var(--primary) 45%, transparent); color: var(--primary); }
+.chip[aria-pressed="true"] { background: color-mix(in oklch, var(--primary) 18%, transparent); border-color: color-mix(in oklch, var(--primary) 45%, transparent); color: var(--primary-ink); }
 .chip svg { width: 12px; height: 12px; }
 .chip--count { font-family: var(--font-mono); }
 .chip--sm { height: 20px; padding-inline: 6px; font-size: 10.5px; }
@@ -94,7 +95,7 @@
 .scope__sector { fill: var(--secondary-foreground); font-family: var(--font-sans); font-size: 11px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; }
 
 .scope__blip { cursor: pointer; outline: none; }
-.scope__dot { fill: var(--heat-2); stroke: color-mix(in oklch, var(--mono) 35%, transparent); stroke-width: 1; transition: r var(--duration) ease-out; }  /* every blip keeps a >=3:1 edge even at the faintest heat step */
+.scope__dot { fill: var(--heat-2); stroke: var(--blip-edge); stroke-width: 1; transition: r var(--duration) ease-out; }  /* --blip-edge is set per theme so the faintest blip keeps a >=3:1 edge (dark 3.2:1, light 3.9:1) */
 .scope__blip[data-step="1"] .scope__dot { fill: var(--heat-1); }
 .scope__blip[data-step="2"] .scope__dot { fill: var(--heat-2); }
 .scope__blip[data-step="3"] .scope__dot { fill: var(--heat-3); }
@@ -129,7 +130,7 @@
 .scope__tip-title { font-weight: 600; color: var(--mono); margin-bottom: 2px; }
 .scope__tip-meta { color: var(--secondary-foreground); }
 .scope__tip-stats { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); margin-top: 3px; }
-.scope__table { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.scope__table { position: absolute; display: block; width: 1px; max-width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .scope-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0 16px 14px; font-size: 11px; color: var(--muted-foreground); }
 .scope-legend__ramp { display: inline-flex; gap: 2px; }
@@ -149,14 +150,15 @@
 .item[data-step="3"] .item__heat i { background: var(--heat-3); }
 .item[data-step="4"] .item__heat i { background: var(--heat-4); }
 .item.is-new { background: color-mix(in oklch, var(--primary) 5%, transparent); }
+.item.is-hover { background: var(--accent); }
 .item.is-selected { background: var(--accent); box-shadow: inset 3px 0 0 var(--primary); }
+.badge--sm { height: 18px; padding-inline: 5px; font-size: 10px; }
 html[dir="rtl"] .item.is-selected { box-shadow: inset -3px 0 0 var(--primary); }
 .item__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .item__chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
 .badge--tier { background: color-mix(in oklch, var(--mono) 10%, transparent); color: var(--mono); border: 1px solid color-mix(in oklch, var(--mono) 25%, transparent); }
 .badge--tier svg { width: 11px; height: 11px; }
-.badge--new { background: color-mix(in oklch, var(--heat-4) 22%, transparent); color: var(--heat-4); }
-html.light .badge--new { color: var(--heat-4); }
+.badge--new { background: color-mix(in oklch, var(--heat-4) 22%, transparent); color: var(--heat-ink-strong); }
 
 .bar__fill { background: var(--heat-3); }
 
@@ -248,7 +250,7 @@ html.light .badge--new { color: var(--heat-4); }
   transition: translate 250ms ease-out;
 }
 html[dir="rtl"] .drawer { translate: -110% 0; }
-.drawer.is-open { translate: 0 0; }
+.drawer.is-open, html[dir="rtl"] .drawer.is-open { translate: 0 0; }
 .drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
 .drawer__head h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--mono); }
 .drawer__body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px; }

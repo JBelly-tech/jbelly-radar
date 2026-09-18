@@ -293,8 +293,9 @@
     if (top < pad) top = y + r + pad;
     var left = clamp(x - w / 2, pad, Math.max(pad, box.width - w - pad));
     top = clamp(top, pad, Math.max(pad, box.height - h - pad));
-    tip.style.insetInlineStart = left.toFixed(0) + 'px';
-    tip.style.insetBlockStart = top.toFixed(0) + 'px';
+    // physical offsets: in RTL inset-inline-start would map to the right edge
+    tip.style.left = left.toFixed(0) + 'px';
+    tip.style.top = top.toFixed(0) + 'px';
   }
 
   function hideTip() {
@@ -345,11 +346,30 @@
   }
 
   function onKey(e) {
-    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
     var g = blipOf(e.target);
     if (!g) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); select(g); return; }
+    var forward = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+    var backward = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    // 400 blips as 400 tab stops would wall off the feed; the scope is one stop
+    // and the arrows walk it (DOM order = sector order, then angle).
+    var all = Array.prototype.slice.call(st.blips.querySelectorAll('.scope__blip'));
+    var i = all.indexOf(g);
+    if (i === -1 || all.length < 2) return;
+    var next = all[(i + (forward ? 1 : all.length - 1)) % all.length];
     e.preventDefault();
-    select(g);
+    g.setAttribute('tabindex', '-1');
+    next.setAttribute('tabindex', '0');
+    next.focus();
+  }
+
+  function settleTabStops() {
+    if (!st.blips) return;
+    var blips = st.blips.querySelectorAll('.scope__blip');
+    if (!blips.length) return;
+    var anchor = st.blips.querySelector('.scope__blip--selected') || st.blips.querySelector('.scope__blip[tabindex="0"]') || blips[0];
+    Array.prototype.forEach.call(blips, function (b) { b.setAttribute('tabindex', b === anchor ? '0' : '-1'); });
   }
 
   function bind(layer) {
@@ -480,5 +500,10 @@
     else if (st.hoverId) placeTip(st.byId[st.hoverId]);
   }
 
-  Radar.scope = { mount: mount, update: update, unmount: unmount, CAP: CAP };
+  function updateRoving(items, state) {
+    update(items, state);
+    settleTabStops();
+  }
+
+  Radar.scope = { mount: mount, update: updateRoving, unmount: unmount, CAP: CAP };
 })();

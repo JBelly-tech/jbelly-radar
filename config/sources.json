@@ -128,7 +128,7 @@
       "url": "https://www.forbes.com/innovation/feed2/",
       "maxItems": 20,
       "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)",
-      "requireMatch": "(?i)\\b(ai|a\\.i\\.|artificial intelligence|llm|llms|agent|agents|agentic|openai|anthropic|claude|gemini|copilot|chatgpt|model|models|robot|robotics|chip|chips|nvidia|gpu|data cent|machine learning|neural|automation|developer|software|startup|cloud|quantum|coding)\\b"
+      "requireMatch": "(?i)(\\b(ai|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|gpus|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|developers|sdk|api|apis)\\b|(?<!\\w)a\\.i\\.|\\brobot(s|ics)?\\b|\\bdata[ -]cent(er|ers|re|res)\\b|\\bsemiconductor(s)?\\b|\\bchip(s|maker|makers)?\\b|\\bnvidia\\b|\\bstartup(s)?\\b|\\bsoftware\\b|\\bcloud\\b|\\bquantum\\b|\\bautomation\\b)"
     },
     {
       "id": "techcrunch-ai",
@@ -159,7 +159,7 @@
       "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
       "maxItems": 15,
       "excludeMatch": "(?i)(connections hints|wordle|quordle|strands hints|mini crossword|horoscope|nyt games|today's .* answers|super bowl|nfl|nba|box office)",
-      "requireMatch": "(?i)\\b(ai|a\\.i\\.|artificial intelligence|llm|llms|agent|agents|agentic|openai|anthropic|claude|gemini|copilot|chatgpt|model|models|robot|robotics|chip|chips|nvidia|gpu|data cent|machine learning|neural|automation|developer|software|startup|cloud|quantum|coding)\\b"
+      "requireMatch": "(?i)(\\b(ai|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|gpus|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|developers|sdk|api|apis)\\b|(?<!\\w)a\\.i\\.|\\brobot(s|ics)?\\b|\\bdata[ -]cent(er|ers|re|res)\\b|\\bsemiconductor(s)?\\b|\\bchip(s|maker|makers)?\\b|\\bnvidia\\b|\\bstartup(s)?\\b|\\bsoftware\\b|\\bcloud\\b|\\bquantum\\b|\\bautomation\\b)"
     },
     {
       "id": "wired-ai",
@@ -290,7 +290,7 @@
       "url": "https://developer.nvidia.com/blog/feed",
       "maxItems": 12,
       "$publisher": "NVIDIA",
-      "requireMatch": "(?i)\\b(ai|a\\.i\\.|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|sdk|api)\\b"
+      "requireMatch": "(?i)(\\b(ai|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|gpus|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|developers|sdk|api|apis)\\b|(?<!\\w)a\\.i\\.|\\brobot(s|ics)?\\b|\\bdata[ -]cent(er|ers|re|res)\\b|\\bsemiconductor(s)?\\b|\\bchip(s|maker|makers)?\\b|\\bnvidia\\b|\\bstartup(s)?\\b|\\bsoftware\\b|\\bcloud\\b|\\bquantum\\b|\\bautomation\\b)"
     },
     {
       "id": "dotnet-blog",
@@ -460,7 +460,7 @@
       "url": "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
       "maxItems": 10,
       "$publisher": "AWS",
-      "requireMatch": "(?i)\\b(ai|a\\.i\\.|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|sdk|api)\\b"
+      "requireMatch": "(?i)(\\b(ai|agent|agents|agentic|llm|llms|model|models|gpt|claude|gemini|copilot|codex|mcp|machine learning|neural|inference|gpu|gpus|bedrock|sagemaker|vertex|openai|anthropic|coding|developer|developers|sdk|api|apis)\\b|(?<!\\w)a\\.i\\.|\\brobot(s|ics)?\\b|\\bdata[ -]cent(er|ers|re|res)\\b|\\bsemiconductor(s)?\\b|\\bchip(s|maker|makers)?\\b|\\bnvidia\\b|\\bstartup(s)?\\b|\\bsoftware\\b|\\bcloud\\b|\\bquantum\\b|\\bautomation\\b)"
     },
     {
       "id": "vscode-updates",
@@ -541,7 +541,7 @@
       "maxItems": 25,
       "map": {
         "title": "server.title|server.name",
-        "url": "server.repository.url|server.websiteUrl|server.remotes.0.url",
+        "url": "server.websiteUrl|server.repository.url|server.remotes.0.url",
         "summary": "server.description",
         "author": "server.name",
         "authorSplit": "/",
