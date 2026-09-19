@@ -13,7 +13,7 @@ jobs:
   check:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Test suite (parser, config, tokens, page structure)
         shell: powershell
@@ -27,13 +27,13 @@ jobs:
           if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
           Write-Host "PSScriptAnalyzer: no errors"
 
-      # The browser harnesses need the dashboard served and a data file to load;
-      # an empty trends.json is enough because every harness brings its fixtures.
+      # The browser harnesses need the dashboard served; they do not need a sync.
+      # run-harness.ps1 seeds tests\fixtures\trends.min.json when data\trends.json
+      # is absent, which is exactly what a fresh clone sees. radar.ps1 serves a
+      # clean 404 for that file until then, so it can start before the seed.
       - name: Browser harnesses (headless Edge)
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path data | Out-Null
-          '{"generatedAt":"2026-01-01T00:00:00Z","durationMs":0,"counts":{"total":0},"sources":[],"publishers":{},"items":[]}' | Set-Content -Encoding UTF8 data\trends.json
           $p = Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','radar.ps1','-NoSync','-NoOpen' -PassThru -WindowStyle Hidden
           Start-Sleep -Seconds 6
           $code = 1
@@ -47,7 +47,7 @@ jobs:
     runs-on: windows-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Live sync
         shell: powershell

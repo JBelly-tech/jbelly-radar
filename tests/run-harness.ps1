@@ -4,6 +4,9 @@
 #   .\radar.ps1 -NoOpen -NoSync          # in one window
 #   powershell -File tests\run-harness.ps1   # in another
 #
+# No sync is needed first: when data\trends.json is absent this script seeds
+# tests\fixtures\trends.min.json in its place and removes it again afterwards.
+#
 # Each harness writes "PASS name" / "FAIL name: detail" lines and a final
 # "DONE n/total" into <pre id="out">; this script greps the rendered DOM.
 
@@ -29,7 +32,24 @@ $files = @(Get-ChildItem -Path $harnessDir -Filter *.html -File | Sort-Object Na
 if ($Only) { $files = @($files | Where-Object { $_.BaseName -like $Only }) }
 if ($files.Count -eq 0) { Write-Output 'no harness files'; exit 0 }
 
+# The `live` harness asserts that a real fetch of data/trends.json delivers
+# items. That file is generated and git-ignored, so on a fresh clone -- and on
+# CI -- it is absent, and the assertion would fail for a reason that has nothing
+# to do with the code. Seed a fixed fixture when it is missing and remove it
+# afterwards. A real synced file is never touched and never overwritten.
+$dataFile = Join-Path $root 'data\trends.json'
+$fixture = Join-Path $root 'tests\fixtures\trends.min.json'
+$seeded = $false
+if (-not (Test-Path $dataFile)) {
+    if (-not (Test-Path $fixture)) { Write-Output 'FAIL missing fixture tests\fixtures\trends.min.json'; exit 1 }
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dataFile) | Out-Null
+    Copy-Item -LiteralPath $fixture -Destination $dataFile -Force
+    $seeded = $true
+    Write-Output 'seeded data\trends.json from tests\fixtures\trends.min.json'
+}
+
 $failed = 0
+try {
 foreach ($f in $files) {
     $profile = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName)
     $dom = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName + '.html')
@@ -49,6 +69,11 @@ foreach ($f in $files) {
     foreach ($x in $fails) { Write-Output ("FAIL {0}: {1}" -f $f.BaseName, $x.Substring(4).Trim()) }
     if ($fails.Count -gt 0) { $failed++ }
     Write-Output ("{0,-4} {1,-14} {2}" -f $(if ($fails.Count) { 'FAIL' } else { 'OK' }), $f.BaseName, $done)
+}
+}
+finally {
+    # never leave a seeded file behind: the next run must see a real sync, or none
+    if ($seeded) { Remove-Item -LiteralPath $dataFile -Force -ErrorAction SilentlyContinue }
 }
 
 if ($failed -gt 0) { Write-Output ("{0} harness file(s) failed" -f $failed); exit 1 }
