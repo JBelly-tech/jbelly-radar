@@ -20,16 +20,16 @@
     "Liberation Mono", monospace;
 
   /* surfaces — dark is the default mode for this product */
-  --background: oklch(15% 0.006 250);
+  --background: oklch(19% 0.006 250);
   --foreground: oklch(96% 0.003 250);
-  --card: oklch(18.5% 0.007 250);
+  --card: oklch(22.5% 0.007 250);
   --card-foreground: oklch(96% 0.003 250);
-  --popover: oklch(20% 0.008 250);
+  --popover: oklch(24% 0.008 250);
   --popover-foreground: oklch(96% 0.003 250);
 
   /* brand — signal amber, the one colour that carries identity */
-  --primary: oklch(74% 0.15 68);
-  --primary-foreground: oklch(17% 0.03 68);
+  --primary: oklch(72% 0.11 68);
+  --primary-foreground: oklch(19% 0.03 68);
 
   /* neutrals */
   --secondary: oklch(24% 0.007 250);
@@ -57,7 +57,7 @@
   --ring: oklch(74% 0.15 68);
 
   /* sidebar */
-  --sidebar: oklch(17% 0.007 250);
+  --sidebar: oklch(21% 0.007 250);
   --sidebar-foreground: oklch(90% 0.004 250);
   --sidebar-muted: oklch(58% 0.009 250);
   --sidebar-accent: oklch(23% 0.008 250);
@@ -71,10 +71,10 @@
 
   /* heat — ONE sequential hue, light → strong, for every magnitude encoding
      (scope blips, row meters, mix bars). Step 4 is 8.9:1 on this surface. */
-  --heat-1: oklch(42% 0.05 68);
-  --heat-2: oklch(56% 0.10 68);
-  --heat-3: oklch(68% 0.14 68);
-  --heat-4: oklch(80% 0.16 72);
+  --heat-1: oklch(45% 0.02 250);
+  --heat-2: oklch(56% 0.05 68);
+  --heat-3: oklch(66% 0.09 68);
+  --heat-4: oklch(76% 0.13 70);
   --heat-ink: oklch(17% 0.03 68);
   /* text on tinted fills: on the dark surface the base colours already pass 4.5:1 */
   --primary-ink: var(--primary);

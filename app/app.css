@@ -274,6 +274,15 @@ html[dir="rtl"] .select { background-position: 11px 14px, 15px 14px; }
 .btn--primary.is-busy svg { animation: spin 900ms linear infinite; }
 @keyframes spin { to { rotate: 360deg; } }
 
+/* First visit only: a ring that breathes three times and stops, so the reader's
+   eye lands on the one control that personalises the board. It never loops
+   forever and it never moves layout; reduced-motion kills it globally. */
+#profileBtn.is-nudged { animation: nudge 1.6s ease-out 3; }
+@keyframes nudge {
+  0%, 100% { box-shadow: var(--shadow-xs); }
+  50% { box-shadow: 0 0 0 4px color-mix(in oklch, var(--primary) 32%, transparent); }
+}
+
 kbd {
   display: inline-flex;
   align-items: center;

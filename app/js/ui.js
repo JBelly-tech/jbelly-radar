@@ -555,9 +555,21 @@
 
   var draft = null;
 
+  // First visit: point at the button instead of seizing the page.
+  function hintProfile() {
+    var b = $('profileBtn');
+    if (b) b.classList.add('is-nudged');
+    toast('ok', t('profileTitle'), t('profileBusiness'), {
+      key: 'tune', label: t('profileTitle'),
+      run: function () { store.set('onboarded', true); openDrawer(); }
+    });
+  }
+
   function openDrawer() {
     if (!state.taxonomy) { toast('err', t('profileTitle'), t('offline')); return; }
     if (!$('profileDrawer').hidden) return;
+    var nudged = $('profileBtn');
+    if (nudged) nudged.classList.remove('is-nudged');
     clearTimeout(drawerTimer);
     var p = prefs().profile;
     draft = { verticals: p.verticals.slice(), tech: p.tech.slice(), orgsOnly: !!p.orgsOnly };
@@ -573,6 +585,8 @@
 
   function closeDrawer() {
     var d = $('profileDrawer');
+    var shell0 = document.querySelector('.shell');
+    if (shell0) shell0.inert = false;        // before the early return, always
     if (d.hidden) return;
     d.classList.remove('is-open');
     $('drawerBackdrop').classList.remove('is-open');
@@ -853,6 +867,10 @@
 
   R.ui = {
     init: function (opts) {
+      // A previous turn could have left the shell inert if a modal errored mid-open;
+      // a dead page is far worse than a missing focus trap, so always clear it.
+      var shell0 = document.querySelector('.shell');
+      if (shell0) shell0.inert = false;
       state.taxonomy = opts && opts.taxonomy ? opts.taxonomy : null;
       state.range = parseInt($('range').value, 10) || 0;
       state.sort = $('sort').value || 'auto';
@@ -879,7 +897,9 @@
     afterFirstData: function () {
       // the visit baseline was just written; recompute "new" badges against it
       renderAll();
-      if (!store.get('onboarded') && state.taxonomy) openDrawer();
+      // The drawer is modal and makes the rest of the page inert, so it is never
+      // opened for the reader: they see the dashboard first and open it themselves.
+      if (!store.get('onboarded') && state.taxonomy) hintProfile();
     },
     noData: function (message) {
       state.error = message || 'no data';
