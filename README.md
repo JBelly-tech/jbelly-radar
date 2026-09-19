@@ -222,6 +222,25 @@ No CDN, no web font, no build step, no framework. The dashboard works from
 - The organisation list is Anglophone-tech-centric at birth. Pull requests that
   add regional organisations are welcome; a tier is a one-line change.
 
+## How it treats the sources it reads
+
+Every source is a public feed or a documented API, fetched at most a few times an
+hour with an honest user agent that names this project and links to it. There is
+no browser impersonation anywhere in `config/sources.json`, and a source that
+answers only a browser is treated as a source saying no: it ships disabled, with
+a `$note` saying why. Reddit is off by default for that reason — its `robots.txt`
+disallows generic clients, so use its OAuth API if you want that feed.
+
+Thank you to arXiv for their open access interoperability. Item metadata in the
+`research` category comes from the arXiv API and RSS feeds; arXiv is not
+affiliated with this project and does not endorse it.
+
+The organisation tiers in `config/publishers.json` are **one maintainer's
+editorial judgement about signal, not a measurement** of any company or person.
+They exist to push well-known publishers up a list. Disagreements are a
+one-line pull request, and anyone listed who would rather not be can open an
+issue and be removed.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).

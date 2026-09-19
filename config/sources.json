@@ -4,7 +4,8 @@
   "defaults": {
     "timeoutSec": 30,
     "maxItems": 25,
-    "userAgent": "jbelly-radar/1.0 (local research dashboard)",
+    "userAgent": "jbelly-radar/1.0 (local research dashboard; +https://github.com/mohammadJohar/jbelly-radar)",
+    "$userAgent": "Identify honestly. A source that only answers a browser user agent is a source saying no: disable it or use its documented API. Never put a Mozilla/5.0 prefix here.",
     "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change.",
     "orgLookupsPerSync": 20,
     "$publisher": "An informational $publisher key names the organisation behind an official channel; attribution itself comes from config/publishers.json (login or domain), never from this key."
@@ -496,10 +497,10 @@
       "label": "Reddit · LocalLLaMA + ClaudeAI + mcp + ML",
       "kind": "rss",
       "category": "discussion",
-      "enabled": true,
+      "enabled": false,
       "url": "https://www.reddit.com/r/LocalLLaMA+ClaudeAI+mcp+MachineLearning/top/.rss?t=week&limit=50",
       "maxItems": 20,
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) jbelly-radar/1.0"
+      "$note": "Off by default: reddit.com/robots.txt is 'User-agent: * / Disallow: /', so this feed is not ours to poll from a generic client, and their Public Content Policy governs programmatic use. It previously shipped with a browser user agent, which was both dishonest and counterproductive - Reddit answers 429 to the spoof and 200 to an honest agent. To use Reddit, register a client and go through their OAuth API rather than turning this on."
     },
     {
       "id": "lobsters-ai",

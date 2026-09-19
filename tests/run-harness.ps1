@@ -11,19 +11,38 @@
 # "DONE n/total" into <pre id="out">; this script greps the rendered DOM.
 
 [CmdletBinding()]
-param([int]$Port = 8477, [string]$Only = '')
+param([int]$Port = 8477, [string]$Only = '', [string]$Browser = '')
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $harnessDir = Join-Path $root 'tests\harness'
 
-$browser = @(
-    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
-    "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
-    "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
-    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $browser) { Write-Output 'FAIL no headless browser (Edge or Chrome) found'; exit 1 }
+# -Browser wins; then the usual install locations, per-user Chrome included (its
+# non-admin installer lands in LOCALAPPDATA, which is not under Program Files);
+# then whatever is on PATH. A machine with no Chromium browser says so and how.
+if ($Browser) {
+    if (-not (Test-Path $Browser)) { Write-Output "FAIL -Browser not found: $Browser"; exit 1 }
+    $browserExe = $Browser
+} else {
+    $browserExe = @(
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "${env:LOCALAPPDATA}\Google\Chrome\Application\chrome.exe",
+        "${env:LOCALAPPDATA}\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles}\Chromium\Application\chrome.exe"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $browserExe) {
+        $browserExe = (Get-Command msedge.exe, chrome.exe, chromium.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty Source)
+    }
+}
+if (-not $browserExe) {
+    Write-Output 'FAIL no headless browser found (looked for Edge, Chrome and Chromium in the usual locations and on PATH)'
+    Write-Output '     pass one explicitly:  powershell -File tests\run-harness.ps1 -Browser "C:\path\to\chrome.exe"'
+    exit 1
+}
 
 try { Invoke-WebRequest -Uri "http://localhost:$Port/api/status" -UseBasicParsing -TimeoutSec 5 | Out-Null }
 catch { Write-Output "FAIL radar.ps1 is not serving on port $Port - start it with .\radar.ps1 -NoOpen -NoSync"; exit 1 }
@@ -56,7 +75,7 @@ foreach ($f in $files) {
     $url = "http://localhost:$Port/tests/harness/$($f.Name)"
     $args = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run', '--disable-extensions',
               "--user-data-dir=$profile", '--virtual-time-budget=8000', '--dump-dom', $url)
-    $p = Start-Process -FilePath $browser -ArgumentList $args -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $dom
+    $p = Start-Process -FilePath $browserExe -ArgumentList $args -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $dom
     $html = ''
     if (Test-Path $dom) { $html = [System.IO.File]::ReadAllText($dom, [System.Text.Encoding]::UTF8) }
     $m = [regex]::Match($html, '<pre id="out"[^>]*>(.*?)</pre>', 'Singleline')
