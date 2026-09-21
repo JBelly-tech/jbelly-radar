@@ -117,6 +117,11 @@ function New-RadarItem {
         momentum    = $null
         published   = $pubIso
         ageDays     = $age
+        # Filled by Set-RadarMomentum from the ledger. `published` is the source's own
+        # date and means a different thing in each feed; `firstSeen` is this radar's own
+        # observation and is the only timestamp comparable across every source.
+        firstSeen   = $null
+        daysOnRadar = $null
         heat        = 0
         tags        = @($Tags | Where-Object { $_ } | Select-Object -First 6)
         spark       = $Spark
@@ -399,16 +404,32 @@ function Set-RadarHeat {
 
 # Momentum comes from OUR OWN snapshots first -- an unambiguous delta between two
 # syncs -- and falls back to a source-supplied weekly series on the first run.
+# The ledger. One entry per item id, carried across every sync, holding:
+#   firstSeen  the first sync that ever recorded this id. NEVER overwritten.
+#   lastSeen   the most recent sync that saw it, so a disappearance is visible.
+#   metric/at  the momentum baseline and when it was taken (metric-bearing items only)
+#   momentum   the last measured value, so it survives a sync too young to re-measure
+#
+# firstSeen is the only field here that cannot be reconstructed later: a source's own
+# "published" date means different things per source (posted, uploaded, last released),
+# so the date this radar first saw something is the one honest, comparable timestamp,
+# and it exists only if it was written down at the time. Every sync that runs without
+# it is a day of record that cannot be recovered.
+#
+# Every item gets an entry, not only those carrying a numeric metric, which is what
+# makes "what is new since" and "how long has this been around" answerable at all.
 function Set-RadarMomentum {
     param($Items, [string]$HistoryPath, [double]$MinBaselineHours = 12)
     $prev = @{}
     if (Test-Path $HistoryPath) {
         try {
+            # -Encoding UTF8 on Get-Content handles a BOM written by older runs
             $loaded = (Get-Content -Raw -Encoding UTF8 $HistoryPath | ConvertFrom-Json)
             foreach ($p in $loaded.PSObject.Properties) { $prev[$p.Name] = $p.Value }
         } catch { $prev = @{} }
     }
     $now = [datetime]::UtcNow
+    $nowIso = $now.ToString('o')
     $next = [ordered]@{}
 
     # A baseline is only replaced once it is older than this. Without it, two syncs
@@ -418,9 +439,13 @@ function Set-RadarMomentum {
 
     foreach ($it in $Items) {
         $measured = $false
+        $old = $null
+        if ($prev.ContainsKey($it.id)) { $old = $prev[$it.id] }
 
-        if ($null -ne $it.metric -and $prev.ContainsKey($it.id)) {
-            $old = $prev[$it.id]
+        # baseline fields, decided by the branches below; $null means "carry nothing"
+        $baseMetric = $null; $baseAt = $null; $baseMomentum = $null
+
+        if ($null -ne $it.metric -and $null -ne $old) {
             $oldAt = (ConvertTo-Utc $old.at)
             if ($oldAt) {
                 $elapsed = ($now - $oldAt).TotalDays
@@ -430,20 +455,54 @@ function Set-RadarMomentum {
                     $weekly = (([double]$it.metric - [double]$old.metric) / $base) * (7.0 / $elapsed) * 100.0
                     $it.momentum = [math]::Round([math]::Max(-200.0, [math]::Min(200.0, $weekly)), 1)
                     $measured = $true
-                    $next[$it.id] = [pscustomobject]@{ metric = $it.metric; at = $now.ToString('o'); momentum = $it.momentum }
+                    $baseMetric = $it.metric; $baseAt = $nowIso; $baseMomentum = $it.momentum
                 }
                 else {
                     # too young to measure against: carry the baseline forward untouched,
                     # and keep the last measured value so it survives until the next one
-                    $next[$it.id] = $old
+                    $baseMetric = Get-Prop $old 'metric' $null
+                    $baseAt = Get-Prop $old 'at' $null
                     $prevMomentum = Get-Prop $old 'momentum' $null
-                    if ($null -ne $prevMomentum) { $it.momentum = [double]$prevMomentum; $measured = $true }
+                    if ($null -ne $prevMomentum) {
+                        $it.momentum = [double]$prevMomentum; $measured = $true; $baseMomentum = $prevMomentum
+                    }
                 }
+            }
+            else {
+                # an unreadable baseline timestamp: start a fresh one rather than drop it
+                $baseMetric = $it.metric; $baseAt = $nowIso
             }
         }
         elseif ($null -ne $it.metric) {
-            $next[$it.id] = [pscustomobject]@{ metric = $it.metric; at = $now.ToString('o') }
+            $baseMetric = $it.metric; $baseAt = $nowIso
         }
+        elseif ($null -ne $old) {
+            # no metric now, but keep whatever baseline we already held
+            $baseMetric = Get-Prop $old 'metric' $null
+            $baseAt = Get-Prop $old 'at' $null
+            $baseMomentum = Get-Prop $old 'momentum' $null
+        }
+
+        # firstSeen: what we already recorded, else the oldest timestamp we can prove
+        # we saw this item at (its carried baseline), else this sync. Falling back to
+        # the baseline is a lower bound we observed, never an invented date.
+        $firstSeen = $null
+        if ($null -ne $old) {
+            $firstSeen = Get-Prop $old 'firstSeen' $null
+            if (-not $firstSeen) { $firstSeen = Get-Prop $old 'at' $null }
+        }
+        if (-not $firstSeen) { $firstSeen = $nowIso }
+
+        $entry = [ordered]@{ firstSeen = $firstSeen; lastSeen = $nowIso }
+        if ($null -ne $baseMetric) { $entry['metric'] = $baseMetric; $entry['at'] = $baseAt }
+        if ($null -ne $baseMomentum) { $entry['momentum'] = $baseMomentum }
+        $next[$it.id] = [pscustomobject]$entry
+
+        # publish it on the item so the dashboard, an MCP tool and a brief can all
+        # answer "how long has this been on the radar" from the artifact alone
+        $it.firstSeen = $firstSeen
+        $seenAt = (ConvertTo-Utc $firstSeen)
+        if ($seenAt) { $it.daysOnRadar = [math]::Round(($now - $seenAt).TotalDays, 2) }
 
         if (-not $measured -and $it.spark -and @($it.spark).Count -ge 4) {
             $s = @($it.spark)
@@ -455,9 +514,29 @@ function Set-RadarMomentum {
         }
     }
 
+    # Entries for items not seen this sync are KEPT: the ledger is the record of what
+    # the radar has ever seen, and dropping a row would erase its firstSeen forever.
+    # A row written before the ledger existed is brought up to shape on the way past,
+    # so every row answers "when did we first see this" the same way.
+    foreach ($k in $prev.Keys) {
+        if ($next.Contains($k)) { continue }
+        $row = $prev[$k]
+        if (-not (Get-Prop $row 'firstSeen' $null)) {
+            $carried = [ordered]@{ firstSeen = (Get-Prop $row 'at' $nowIso); lastSeen = (Get-Prop $row 'at' $nowIso) }
+            foreach ($f in @('metric', 'at', 'momentum')) {
+                $v = Get-Prop $row $f $null
+                if ($null -ne $v) { $carried[$f] = $v }
+            }
+            $row = [pscustomobject]$carried
+        }
+        $next[$k] = $row
+    }
+
     $dir = Split-Path -Parent $HistoryPath
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    ($next | ConvertTo-Json -Depth 4) | Set-Content -Path $HistoryPath -Encoding UTF8
+    $tmp = $HistoryPath + '.tmp'
+    [System.IO.File]::WriteAllText($tmp, ($next | ConvertTo-Json -Depth 4 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+    Move-FileWithRetry -From $tmp -To $HistoryPath
 }
 
 # -- the sync itself ----------------------------------------------------------
