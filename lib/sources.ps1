@@ -120,8 +120,9 @@ function New-RadarItem {
         # Filled by Set-RadarMomentum from the ledger. `published` is the source's own
         # date and means a different thing in each feed; `firstSeen` is this radar's own
         # observation and is the only timestamp comparable across every source.
-        firstSeen   = $null
-        daysOnRadar = $null
+        firstSeen      = $null
+        firstSeenBasis = $null
+        daysOnRadar    = $null
         heat        = 0
         tags        = @($Tags | Where-Object { $_ } | Select-Object -First 6)
         spark       = $Spark
@@ -484,16 +485,33 @@ function Set-RadarMomentum {
         }
 
         # firstSeen: what we already recorded, else the oldest timestamp we can prove
-        # we saw this item at (its carried baseline), else this sync. Falling back to
-        # the baseline is a lower bound we observed, never an invented date.
+        # we saw this item at (its carried baseline), else this sync.
+        #
+        # firstSeenBasis says which of two different claims the date is making:
+        #   observed       this sync saw the item arrive, and the one before did not.
+        #                  A real first sighting.
+        #   snapshot-floor the earliest record we hold. The item may well be older;
+        #                  this is a lower bound, not a birth date.
+        # Every consumer must render a floor as "seen by" and never as "first
+        # appeared". The distinction is free to record now and impossible to
+        # reconstruct later, and publishing a floor as a birth date is exactly the
+        # kind of quiet inaccuracy a dated record exists to prevent.
         $firstSeen = $null
+        $firstSeenBasis = $null
         if ($null -ne $old) {
             $firstSeen = Get-Prop $old 'firstSeen' $null
-            if (-not $firstSeen) { $firstSeen = Get-Prop $old 'at' $null }
+            $firstSeenBasis = Get-Prop $old 'firstSeenBasis' $null
+            if (-not $firstSeen) {
+                # a pre-ledger row: its baseline timestamp proves we saw it then, but
+                # says nothing about when it actually arrived
+                $firstSeen = Get-Prop $old 'at' $null
+                $firstSeenBasis = 'snapshot-floor'
+            }
         }
-        if (-not $firstSeen) { $firstSeen = $nowIso }
+        if (-not $firstSeen) { $firstSeen = $nowIso; $firstSeenBasis = 'observed' }
+        if (-not $firstSeenBasis) { $firstSeenBasis = 'snapshot-floor' }
 
-        $entry = [ordered]@{ firstSeen = $firstSeen; lastSeen = $nowIso }
+        $entry = [ordered]@{ firstSeen = $firstSeen; firstSeenBasis = $firstSeenBasis; lastSeen = $nowIso }
         if ($null -ne $baseMetric) { $entry['metric'] = $baseMetric; $entry['at'] = $baseAt }
         if ($null -ne $baseMomentum) { $entry['momentum'] = $baseMomentum }
         $next[$it.id] = [pscustomobject]$entry
@@ -501,6 +519,7 @@ function Set-RadarMomentum {
         # publish it on the item so the dashboard, an MCP tool and a brief can all
         # answer "how long has this been on the radar" from the artifact alone
         $it.firstSeen = $firstSeen
+        $it.firstSeenBasis = $firstSeenBasis
         $seenAt = (ConvertTo-Utc $firstSeen)
         if ($seenAt) { $it.daysOnRadar = [math]::Round(($now - $seenAt).TotalDays, 2) }
 
@@ -521,8 +540,15 @@ function Set-RadarMomentum {
     foreach ($k in $prev.Keys) {
         if ($next.Contains($k)) { continue }
         $row = $prev[$k]
-        if (-not (Get-Prop $row 'firstSeen' $null)) {
-            $carried = [ordered]@{ firstSeen = (Get-Prop $row 'at' $nowIso); lastSeen = (Get-Prop $row 'at' $nowIso) }
+        $rowSeen = Get-Prop $row 'firstSeen' $null
+        $rowBasis = Get-Prop $row 'firstSeenBasis' $null
+        if (-not $rowSeen -or -not $rowBasis) {
+            # Anything we cannot prove we watched arrive is a floor, not a birth date.
+            if (-not $rowSeen) { $rowSeen = (Get-Prop $row 'at' $nowIso) }
+            $carried = [ordered]@{
+                firstSeen = $rowSeen; firstSeenBasis = 'snapshot-floor'
+                lastSeen = (Get-Prop $row 'lastSeen' (Get-Prop $row 'at' $nowIso))
+            }
             foreach ($f in @('metric', 'at', 'momentum')) {
                 $v = Get-Prop $row $f $null
                 if ($null -ne $v) { $carried[$f] = $v }

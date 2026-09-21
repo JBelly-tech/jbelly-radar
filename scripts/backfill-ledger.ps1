@@ -64,11 +64,21 @@ if (-not $Quiet) {
 
 $earliest = @{}
 $latest = @{}
+$basis = @{}
+$oldestIso = $ordered[0].at.ToString('o')
 foreach ($snap in $ordered) {
     $iso = $snap.at.ToString('o')
     foreach ($it in $snap.items) {
         if (-not $it.id) { continue }
-        if (-not $earliest.ContainsKey($it.id)) { $earliest[$it.id] = $iso }
+        if (-not $earliest.ContainsKey($it.id)) {
+            $earliest[$it.id] = $iso
+            # An item already present in the OLDEST snapshot was not born there - that
+            # is simply as far back as the record goes. Its true first sighting is that
+            # date or earlier, so it is a floor, never a birth date. An item that first
+            # appears in any later snapshot was genuinely absent from the one before,
+            # which is a real observation.
+            if ($iso -eq $oldestIso) { $basis[$it.id] = 'snapshot-floor' } else { $basis[$it.id] = 'observed' }
+        }
         $latest[$it.id] = $iso
     }
     if (-not $Quiet) { Write-Output ("  {0,-20} {1,5} items" -f $snap.name, @($snap.items).Count) }
@@ -92,7 +102,9 @@ foreach ($id in $earliest.Keys) {
     if (-not $ledger.Contains($id)) {
         # an item that has since dropped off the radar, but we saw it: it belongs in
         # the record, or the record is not a record
-        $ledger[$id] = [pscustomobject]([ordered]@{ firstSeen = $proven; lastSeen = $latest[$id] })
+        $ledger[$id] = [pscustomobject]([ordered]@{
+            firstSeen = $proven; firstSeenBasis = $basis[$id]; lastSeen = $latest[$id]
+        })
         $added++
         continue
     }
@@ -101,18 +113,22 @@ foreach ($id in $earliest.Keys) {
     $current = $null
     if ($row.PSObject.Properties.Name -contains 'firstSeen') { $current = $row.firstSeen }
 
+    $currentBasis = $null
+    if ($row.PSObject.Properties.Name -contains 'firstSeenBasis') { $currentBasis = $row.firstSeenBasis }
+
     $needs = $false
     if (-not $current) { $needs = $true }
+    elseif (-not $currentBasis) { $needs = $true }   # a row from before the basis existed
     else {
         try { if ([datetime]::Parse($current) -gt $provenAt) { $needs = $true } } catch { $needs = $true }
     }
 
     if (-not $needs) { $unchanged++; continue }
 
-    # rebuild the row with firstSeen first, keeping every other field untouched
-    $fresh = [ordered]@{ firstSeen = $proven }
+    # rebuild the row with firstSeen and its basis first, keeping every other field
+    $fresh = [ordered]@{ firstSeen = $proven; firstSeenBasis = $basis[$id] }
     foreach ($p in $row.PSObject.Properties) {
-        if ($p.Name -eq 'firstSeen') { continue }
+        if ($p.Name -eq 'firstSeen' -or $p.Name -eq 'firstSeenBasis') { continue }
         $fresh[$p.Name] = $p.Value
     }
     if (-not $fresh.Contains('lastSeen')) { $fresh['lastSeen'] = $latest[$id] }
