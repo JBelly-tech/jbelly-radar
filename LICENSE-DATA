@@ -1,0 +1,54 @@
+JBelly Radar — licence for the curated content and the record
+=============================================================
+
+The software in this repository is under the MIT Licence; see LICENSE.
+
+This file covers the parts that are not software — the hand-written editorial
+judgement and the dated record of what the radar has observed. They took
+judgement and elapsed time to produce rather than an afternoon of typing, and
+they are what this project is actually worth, so they carry attribution.
+
+Covered by this licence
+-----------------------
+
+    config/taxonomy.json      19 business verticals x 46 technologies, with a
+                              hand-written justification for every pairing in
+                              both English and Arabic
+    config/publishers.json    the curated publisher reputation tiers
+    config/sources.json       the source set and its per-source filters
+    data/ledger.json          the dated record of when this radar first saw
+                              each item
+    content/**                published briefs and dated calls, if present
+    docs/research/**          the written research
+
+Licence
+-------
+
+Creative Commons Attribution 4.0 International (CC BY 4.0).
+
+    Human-readable summary:  https://creativecommons.org/licenses/by/4.0/
+    Full legal code:         https://creativecommons.org/licenses/by/4.0/legalcode
+
+You may share and adapt this material, including commercially, provided you
+give appropriate credit, link to the licence, and say whether you changed
+anything. You may not suggest that JBelly endorses you or your use.
+
+Attribution
+-----------
+
+    JBelly Radar — https://github.com/mohammadJohar/jbelly-radar
+    Licensed under CC BY 4.0.
+
+If you have adapted the material, say so; if you have re-tiered a publisher or
+rewritten a justification, that is a different opinion from ours and readers
+should be able to tell whose judgement they are reading.
+
+What this is not
+----------------
+
+The reputation tiers and the vertical justifications are one maintainer's
+editorial judgement about signal. They are not a measurement of any company or
+person, and nothing here is a certification, a rating, or advice. See the
+README section "How it treats the sources it reads".
+
+Copyright (c) 2026 JBelly

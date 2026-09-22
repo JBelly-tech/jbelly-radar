@@ -2,10 +2,11 @@
 
 [![ci](https://github.com/mohammadJohar/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammadJohar/jbelly-radar/actions/workflows/ci.yml) · MIT · Windows PowerShell 5.1+ · no dependencies, no build step, no API key, no model call
 
-**A live, local trend radar for people who build with AI.** It reads 55 public
-sources (56 configured; VentureBeat ships disabled because it rate-limits) — the official channels of Cloudflare, OpenAI, Anthropic, Google, GitHub,
+**A live, local trend radar for people who build with AI.** It reads 54 public
+sources (56 configured; two ship disabled, each with a `$note` saying why) — the
+official channels of Cloudflare, OpenAI, Anthropic, Google, GitHub,
 AWS, Meta, NVIDIA, Microsoft, Vercel, Stripe and others, the agent-skills
-leaderboard, the MCP registries, Hacker News, Reddit, Lobsters, dev.to, Product
+leaderboard, the MCP registries, Hacker News, Lobsters, dev.to, Product
 Hunt, Hugging Face, arXiv and the tech press — ranks everything with one
 explainable score, **highlights what notable organisations published**, and
 re-orders the feed around *your* business, *your* technologies and what you
@@ -39,8 +40,8 @@ cd jbelly-radar
 ```
 
 That is the whole install. `radar.ps1` starts a background sync, serves the
-dashboard on `localhost` and opens it. The first sync takes about 90 seconds;
-the page shows which source it is on.
+dashboard on `localhost` and opens it. The first sync takes about 12 seconds —
+the sources are fetched concurrently — and the page follows the progress.
 
 Optional, for a higher GitHub rate limit (60 → 5 000 requests/hour):
 
@@ -91,9 +92,17 @@ numbers are in [`config/sources.json`](config/sources.json):
 
 | Part | Weight | Meaning |
 |------|--------|---------|
-| **recency** | 0.40 | `exp(-ln2 × ageDays / halfLifeDays)`. News halves every 3 days, releases and discussion every 5, research every 7, skills every 14, repositories every 21. |
-| **popularity** | 0.35 | `log10(1 + metric) / log10(1 + ceiling)` — the first thousand stars count for far more than the twentieth. |
+| **recency** | 0.40 | `exp(-ln2 × age / halfLifeDays)`. News halves every 3 days, releases and discussion every 5, research every 7, skills every 14, repositories every 21. Age comes from the source's own date, or, for an item that has none, from the day this radar first saw it. |
+| **popularity** | 0.35 | `log10(1 + metric) / log10(1 + ceiling)` — the first thousand stars count for far more than the twentieth. A news item or a release has no such metric; there the publisher's tier stands in, because who published it is the only quality signal those categories carry. |
 | **momentum** | 0.25 | Change in the metric per week, **measured between two of our own snapshots** — a baseline is only replaced once it is 12 hours old, so two syncs minutes apart report no momentum rather than an invented one. [ADR 0002](docs/adr/0002-momentum-is-measured.md) |
+
+**A term that cannot be measured is dropped, not guessed.** The remaining
+weights are renormalised, so heat means *of what could actually be measured
+here* — never a hard-coded average standing in for evidence. Because an item
+with one measurable term would otherwise score full marks on it, the result is
+scaled by how much of the weight was measurable (`heat.confidenceFloor`, 0.7).
+Every item carries `heatBasis` naming the terms used, so no score is
+unexplainable.
 
 **Personal score** (browser, *For you* only):
 
@@ -110,7 +119,7 @@ touched, so the feed can still surprise you. Every row can show its terms.
 
 ## Sources
 
-56 configured, 55 enabled by default, in six kinds of signal. All public, none
+56 configured, 54 enabled by default, in six kinds of signal. All public, none
 needing a key; each one was fetched live before being admitted, and a failing
 source keeps its last items and is shown as *stale* rather than disappearing.
 
@@ -120,7 +129,7 @@ source keeps its last items and is shown as *stale* rather than disappearing.
 | **repo** | the official MCP registry, Smithery, npm packages tagged `mcp`, Hugging Face trending models, new MCP servers and rising AI repositories on GitHub, agent frameworks |
 | **release** | changelogs and release feeds of Claude Code and the Claude platform, `openai/codex`, `vercel/ai`, `cloudflare/agents`, `modelcontextprotocol/servers`, Cloudflare, GitHub, Vercel, AWS, VS Code, Cursor; Product Hunt AI launches |
 | **news** | Cloudflare, OpenAI, Google AI and DeepMind, GitHub, AWS ML, Meta engineering, NVIDIA, Microsoft .NET, Stripe, Supabase, Docker, Mistral, Hugging Face, MIT News, Simon Willison; Forbes, TechCrunch, WIRED, The Verge, Ars Technica |
-| **discussion** | Hacker News (AI agents, coding agents, vibe coding, Claude Code), Reddit (LocalLLaMA, ClaudeAI, mcp, MachineLearning), Lobsters, dev.to |
+| **discussion** | Hacker News (AI agents, coding agents, vibe coding, Claude Code), Lobsters, dev.to. *Reddit is configured but ships disabled — see below.* |
 | **research** | arXiv cs.AI and cs.CL, Hugging Face daily papers |
 
 ### Adding a source
@@ -177,7 +186,7 @@ jbelly-radar/
 ├─ radar.ps1               entry: background sync, localhost server, /api/status, /api/sync, /api/data
 ├─ scripts/sync.ps1        headless sync (the same function the server runs)
 ├─ config/
-│  ├─ sources.json         56 sources, filters, heat weights and half-lives
+│  ├─ sources.json         56 sources (54 on), filters, heat weights, half-lives
 │  ├─ publishers.json      150 entries (146 organisations, 4 individuals) with tiers, logins and domains
 │  └─ taxonomy.json        46 technologies, 19 business verticals, advice in EN + AR
 ├─ lib/
@@ -243,4 +252,14 @@ issue and be removed.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+Two licences, because there are two different things here.
+
+| What | Licence | |
+|---|---|---|
+| The software — `radar.ps1`, `lib/`, `scripts/`, `app/`, `tests/` | MIT | [LICENSE](LICENSE) |
+| The curated content and the record — `config/taxonomy.json`, `config/publishers.json`, `config/sources.json`, `data/ledger.json`, `docs/research/` | CC BY 4.0 | [LICENSE-DATA](LICENSE-DATA) |
+
+The code is an afternoon's work for anyone who wants to rebuild it, so it is
+MIT and you owe nothing. The 85 hand-written vertical justifications, the
+publisher tiers and the dated observation record are not; use them freely,
+including commercially, and credit **JBelly Radar** with a link.
