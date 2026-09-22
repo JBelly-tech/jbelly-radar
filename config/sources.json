@@ -10,7 +10,8 @@
     "$userAgent": "Identify honestly. A source that only answers a browser user agent is a source saying no: disable it or use its documented API. Never put a Mozilla/5.0 prefix here.",
     "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change.",
     "orgLookupsPerSync": 20,
-    "$publisher": "An informational $publisher key names the organisation behind an official channel; attribution itself comes from config/publishers.json (login or domain), never from this key."
+    "$publisher": "An informational $publisher key names the organisation behind an official channel; attribution itself comes from config/publishers.json (login or domain), never from this key.",
+    "$publishedMeaning": "What a source's date means, stamped on every item: posted | created | released | updated | indexed | none | unknown. It is a different event in every feed, and comparing them as one is how a routine patch release gets presented as news. Derived from 'kind' when not declared; json-api maps its own field per source, so it must declare."
   },
   "sources": [
     {
@@ -531,7 +532,8 @@
         "metricLabel": "reactions",
         "published": "published_timestamp",
         "tags": "tag_list"
-      }
+      },
+      "publishedMeaning": "posted"
     },
     {
       "id": "mcp-official-registry",
@@ -550,7 +552,8 @@
         "authorSplit": "/",
         "published": "_meta.[io.modelcontextprotocol.registry/official].publishedAt|_meta.[io.modelcontextprotocol.registry/official].updatedAt",
         "order": "published"
-      }
+      },
+      "publishedMeaning": "updated"
     },
     {
       "id": "smithery-registry",
@@ -570,7 +573,8 @@
         "metric": "useCount",
         "metricLabel": "uses",
         "published": "createdAt"
-      }
+      },
+      "publishedMeaning": "updated"
     },
     {
       "id": "npm-mcp-packages",
@@ -590,7 +594,8 @@
         "metricLabel": "weekly downloads",
         "published": "package.date",
         "tags": "package.keywords"
-      }
+      },
+      "publishedMeaning": "released"
     },
     {
       "id": "hf-models-trending",
@@ -611,7 +616,8 @@
         "metricLabel": "likes",
         "published": "createdAt",
         "tags": "tags"
-      }
+      },
+      "publishedMeaning": "updated"
     },
     {
       "id": "hf-daily-papers",
@@ -631,7 +637,8 @@
         "metric": "paper.upvotes",
         "metricLabel": "upvotes",
         "published": "paper.publishedAt|publishedAt"
-      }
+      },
+      "publishedMeaning": "indexed"
     },
     {
       "id": "arxiv-cs-cl",

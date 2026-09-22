@@ -85,12 +85,32 @@ function Invoke-Http {
     return ($enc.GetString($bytes)).TrimStart([char]0xFEFF)
 }
 
+function Get-PublishedMeaning {
+    # What a source's date means. Declared per source with `publishedMeaning`, or
+    # derived from the kind, which is honest because each fetcher reads one field:
+    # github-search reads created_at (the repository was created), hn reads
+    # created_at (the story was posted), rss reads pubDate/published/updated, and
+    # a release feed's entry is a release, not a post. json-api maps a field per
+    # source, so its meaning cannot be guessed and must be declared.
+    param($Source)
+    $declared = Get-Prop $Source 'publishedMeaning' $null
+    if ($declared) { return $declared }
+    switch ((Get-Prop $Source 'kind' '')) {
+        'github-search' { return 'created' }
+        'hn'            { return 'posted' }
+        'skills-sh'     { return 'none' }
+        'rss'           { if ((Get-Prop $Source 'category' '') -eq 'release') { return 'released' } else { return 'posted' } }
+        default         { return 'unknown' }
+    }
+}
+
 function New-RadarItem {
     param(
         [string]$SourceId, [string]$SourceLabel, [string]$Category,
         [string]$Title, [string]$Url, [string]$Summary = '', [string]$Author = '',
         $Metric = $null, [string]$MetricLabel = '', $Published = $null,
-        [string[]]$Tags = @(), $Spark = $null, [string]$Install = '', [string]$Key = ''
+        [string[]]$Tags = @(), $Spark = $null, [string]$Install = '', [string]$Key = '',
+        [string]$PublishedMeaning = 'unknown'
     )
     $canon = Get-CanonicalUrl $Url
     # Identity defaults to the canonical URL. A source whose items legitimately
@@ -120,6 +140,12 @@ function New-RadarItem {
         # Filled by Set-RadarMomentum from the ledger. `published` is the source's own
         # date and means a different thing in each feed; `firstSeen` is this radar's own
         # observation and is the only timestamp comparable across every source.
+        # What `published` above actually MEANS for this source. It is a different
+        # event in every feed - a Hacker News story was posted, a GitHub repository
+        # was created, a changelog entry was released, an npm package was last
+        # published - and comparing them as if they were one thing is how a routine
+        # patch release gets announced as news.
+        publishedMeaning = $PublishedMeaning
         firstSeen      = $null
         firstSeenBasis = $null
         daysOnRadar    = $null
@@ -162,7 +188,7 @@ function Get-SkillsShItems {
             -Title $m.Groups[3].Value -Url $link `
             -Summary "Published by $repo on the skills directory." `
             -Author $author -Metric $installs -MetricLabel 'installs' `
-            -Tags @('skill', $owner) -Spark $chrono -Install "npx skills add $repo" `
+            -Tags @('skill', $owner) -Spark $chrono -Install "npx skills add $repo" -PublishedMeaning 'none' `
             -Key "skills.sh/$repo#$($m.Groups[2].Value)"
         $items.Add($item)
         if ($items.Count -ge $max) { break }
@@ -204,7 +230,7 @@ function Get-GitHubItems {
         $item = New-RadarItem -SourceId $Source.id -SourceLabel $Source.label -Category $Source.category `
             -Title $r.full_name -Url $r.html_url -Summary (ConvertTo-PlainText (Get-Prop $r 'description' '')) `
             -Author (Get-Prop $r.owner 'login' '') -Metric ([int64]$r.stargazers_count) -MetricLabel 'stars' `
-            -Published (ConvertTo-Utc $r.created_at) -Tags $tags
+            -Published (ConvertTo-Utc $r.created_at) -Tags $tags -PublishedMeaning (Get-PublishedMeaning $Source)
         $items.Add($item)
         if ($items.Count -ge $max) { break }
     }
@@ -233,7 +259,7 @@ function Get-HnItems {
             -Title (Get-Prop $h 'title' '(untitled)') -Url $link `
             -Summary "$pts points, $cmts comments on Hacker News." `
             -Author (Get-Prop $h 'author' '') -Metric ([int64]$pts) -MetricLabel 'points' `
-            -Published (ConvertTo-Utc (Get-Prop $h 'created_at' $null)) -Tags @('hn') -Install $thread
+            -Published (ConvertTo-Utc (Get-Prop $h 'created_at' $null)) -Tags @('hn') -Install $thread -PublishedMeaning (Get-PublishedMeaning $Source)
         $items.Add($item)
     }
     return $items
@@ -288,7 +314,7 @@ function Get-RssItems {
 
         $item = New-RadarItem -SourceId $Source.id -SourceLabel $Source.label -Category $Source.category `
             -Title (ConvertTo-PlainText $titleNode.InnerText 180) -Url $link.Trim() `
-            -Summary $desc -Author $author -Published $pub -Tags $cats
+            -Summary $desc -Author $author -Published $pub -Tags $cats -PublishedMeaning (Get-PublishedMeaning $Source)
         $items.Add($item)
     }
     # A changelog feed can carry a thousand entries and not every feed is
@@ -359,7 +385,7 @@ function Get-JsonApiItems {
             -Title (ConvertTo-PlainText "$title" 180) -Url $url `
             -Summary (ConvertTo-PlainText "$summary") -Author "$author" `
             -Metric $metricVal -MetricLabel (Get-Prop $map 'metricLabel' '') `
-            -Published (ConvertTo-Utc "$pubRaw") -Tags $tags
+            -Published (ConvertTo-Utc "$pubRaw") -Tags $tags -PublishedMeaning (Get-PublishedMeaning $Source)
         $items.Add($item)
     }
     $sorted = @($items | Sort-Object -Property @{ Expression = { if ($null -ne $_.metric) { [double]$_.metric } else { -1 } }; Descending = $true })
