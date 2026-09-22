@@ -4,6 +4,64 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.3.0] — 2026-09-22
+
+The radar starts keeping a record, and stops reporting numbers it cannot support.
+
+### Added
+
+- **A ledger.** `data/ledger.json` records, per item, the first sync that ever saw
+  it, the last one that did, and the momentum baseline. It is the only artefact a
+  re-run cannot reproduce, so unlike everything else under `data/` it is
+  committed. 1,239 rows.
+- **`scripts/backfill-ledger.ps1`** recovers first-seen from the dated snapshots
+  the radar had been writing and nobody was reading: 594 dates corrected, 463
+  items restored. It only ever moves a date earlier, so re-running is a no-op.
+- **`firstSeenBasis`** on every row and item — `observed` when this radar watched
+  the item arrive, `snapshot-floor` when it was already there when the record
+  began. A floor is shown as *seen by*, never as *first appeared*.
+- **`publishedMeaning`** per source: `posted`, `created`, `released`, `updated`,
+  `indexed`, `none`. One field had been carrying six different events.
+- **An operator console** at `/app/ops/` — source health, signal coverage, what
+  heat was computed from, and arrivals by day. Every card says what to do when it
+  goes red. A fourth section is deliberately empty and says so.
+- **`scripts/brief.ps1`** writes a dated, bilingual brief per business vertical,
+  joining the hand-written judgement in the taxonomy to what the radar saw, with
+  citations frozen at write time. All 19 verticals, both languages.
+- **`scripts/pack-demo.ps1`** bundles a demo that opens by double-click — no
+  install, no server, no network, no account.
+- **Source saturation**: every health row carries `fetched`, `cap` and
+  `saturated`. 49 of 54 working sources return at their cap.
+- **`LICENSE-DATA`**: the curated content and the observation record move to
+  CC BY 4.0. The software stays MIT.
+
+### Changed
+
+- **Sources are fetched concurrently.** A full sync went from 85.9 s to 12 s.
+  Verified identical against the sequential path: 748 items both ways, and zero
+  items where a different source won the URL.
+- **Heat stops guessing.** A term that cannot be measured is dropped and the
+  remaining weights renormalised, instead of substituting 0.5. Where popularity
+  cannot be measured, the publisher's tier stands in. A confidence factor scales
+  the result by how much was measurable. Every item carries `heatBasis`.
+- An item with no published date ages from `firstSeen` rather than being assumed
+  to be exactly one half-life old.
+- `radar.ps1` resolves any directory to its index, so adding a page no longer
+  means editing the server.
+
+### Fixed
+
+- **Heat was a relabelled age for 43% of the corpus.** news, research and release
+  declare `metricCeiling: 1`, so popularity fell to a constant and momentum was
+  copied from it; those categories scored `0.4·recency + 0.30`, locked in 30..70.
+- The Reddit source shipped with a browser user agent. Measured: Reddit answers
+  429 to the spoof and 200 to an honest one, and its `robots.txt` disallows
+  generic clients either way. It now ships disabled, with a note saying why.
+- The README claimed 55 sources, listed Reddit as live, said a sync takes 90
+  seconds, and described heat as three terms always present.
+- `config/publishers.json` claimed an opt-in for the four listed individuals that
+  was never obtained.
+
 ## [0.2.0] — 2026-09-18
 
 The radar becomes live, personal and organisation-aware.
