@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "$comment": "Every word scripts/brief.ps1 writes, in both languages. The wording of a published brief is editorial, so it lives here and not in code: changing a sentence is a config edit, and PowerShell 5.1 reads .ps1 files as ANSI, so Arabic in a script would corrupt anyway. Placeholders: {date} {items} {sources} {count} {tech} {why} {title} {url} {who} {tier} {heat} {category} {seen} {meaning} {vertical}.",
+
+  "en": {
+    "title": "# {vertical}: what to pay attention to",
+    "meta": "**{date}** · JBelly Radar · {items} signals from {sources} public sources",
+    "intro": [
+      "These technologies matter for this industry. The reason given for each is a",
+      "judgement, written before the evidence was looked at. What follows it is what",
+      "the radar actually saw this week, so you can check the judgement against it",
+      "rather than take it on trust."
+    ],
+    "techHeading": "## {tech}",
+    "why": "**Why it matters here.** {why}",
+    "nothing": "_Nothing on the radar under this tag this week. That is a finding, not a gap: it means the noise is elsewhere._",
+    "found": "{count} signals carry this tag. The strongest:",
+    "citation": "- **[{title}]({url})** — {who}{tier}",
+    "citationMeta": "  <br>heat {heat} · {category} · {seen} · source date means _{meaning}_",
+    "unattributed": "unattributed",
+    "tierNote": " (tier {tier})",
+    "seenObserved": "first seen {date}",
+    "seenFloor": "on the radar by {date}",
+    "footer": [
+      "",
+      "---",
+      "",
+      "## How to read this",
+      "",
+      "Heat is a 0-100 score computed from freshness, popularity and measured",
+      "momentum. A term that cannot be measured for an item is dropped rather than",
+      "guessed, and the score is scaled by how much could be measured, so heat means",
+      "*of what was actually measurable here*.",
+      "",
+      "**\"first seen\"** is the day this radar watched the item arrive. **\"on the radar",
+      "by\"** means it was already there when the record began, so the true date is that",
+      "day or earlier. A source's own date means a different thing in every feed, which",
+      "is why each citation says which event it refers to.",
+      "",
+      "Every link above was frozen on the date at the top. The radar replaces about a",
+      "sixth of its items every day, so a brief pointing at the live feed would rot.",
+      "This one does not.",
+      "",
+      "The technologies and the reasons are one analyst's judgement, published so it",
+      "can be argued with. The evidence under each is machine-collected and",
+      "reproducible: the same inputs give the same list.",
+      "",
+      "*JBelly Radar · github.com/mohammadJohar/jbelly-radar · CC BY 4.0*"
+    ]
+  },
+
+  "ar": {
+    "title": "# {vertical}: شو يستاهل انتباهك",
+    "meta": "**{date}** · رادار JBelly · {items} إشارة من {sources} مصدر عام",
+    "intro": [
+      "هاي التقنيات بتهمّ هالقطاع. سبب كل وحدة حُكم مكتوب قبل ما ننظر للأدلة،",
+      "واللي بعده هو اللي شافه الرادار هالأسبوع — عشان تفحص الحكم عليه بدل ما",
+      "تاخده على عمياني."
+    ],
+    "techHeading": "## {tech}",
+    "why": "**ليش بتهمّ هون.** {why}",
+    "nothing": "_ولا إشي بالرادار تحت هالوسم هالأسبوع. وهاي نتيجة مش نقص: معناها الضجيج بمكان تاني._",
+    "found": "{count} إشارة بتحمل هالوسم. أقواهم:",
+    "citation": "- **[{title}]({url})** — {who}{tier}",
+    "citationMeta": "  <br>حرارة {heat} · {category} · {seen} · تاريخ المصدر بيعني _{meaning}_",
+    "unattributed": "ناشر غير محدّد",
+    "tierNote": " (طبقة {tier})",
+    "seenObserved": "شوفناه أول مرة {date}",
+    "seenFloor": "موجود بالرادار من {date}",
+    "footer": [
+      "",
+      "---",
+      "",
+      "## كيف تقرأ هالملخّص",
+      "",
+      "الحرارة رقم من 0 لـ100 بينحسب من الحداثة والشعبية والزخم المقيس. أي إشارة ما",
+      "بتنقاس بتنشال بدل ما تنخمّن، والنتيجة بتتقلّص حسب كم إشارة انقاست فعلًا — يعني",
+      "الحرارة معناها *من اللي قدرنا نقيسه هون*.",
+      "",
+      "**\"شوفناه أول مرة\"** يعني اليوم اللي الرادار شافه فيه يوصل. **\"موجود بالرادار",
+      "من\"** يعني كان موجود لما بلّش السجل، فتاريخه الحقيقي هديك اليوم أو قبله. تاريخ",
+      "المصدر بيعني شي مختلف بكل تغذية، ولهيك كل استشهاد بيقول أي حدث بيقصد.",
+      "",
+      "كل الروابط فوق مجمّدة على التاريخ اللي فوق. الرادار بيبدّل حوالي سدس عناصره كل",
+      "يوم، فأي ملخّص بيأشّر على التغذية الحيّة بيفسد. هاد لأ.",
+      "",
+      "التقنيات وأسبابها حُكم محلّل واحد، منشور عشان ينحاكى فيه. والأدلة تحت كل وحدة",
+      "مجموعة آليًا وقابلة للإعادة: نفس المدخلات بتعطي نفس القائمة.",
+      "",
+      "*رادار JBelly · github.com/mohammadJohar/jbelly-radar · CC BY 4.0*"
+    ]
+  }
+}

@@ -22,3 +22,8 @@ desktop.ini
 .idea/
 *.swp
 data/sync.lock
+
+# Briefs are regenerated from the taxonomy plus a dated trends.json by
+# scripts/brief.ps1. A brief you have actually SENT is a different thing — move
+# it out of this folder and commit it, because a sent claim needs a record.
+content/briefs/
