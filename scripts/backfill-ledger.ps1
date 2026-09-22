@@ -1,6 +1,6 @@
 # scripts/backfill-ledger.ps1 — rebuild firstSeen in the ledger from daily snapshots.
 #
-# The ledger (data/history/metrics.json) records, per item id, the first sync that
+# The ledger (data/ledger.json) records, per item id, the first sync that
 # ever saw it. That field is written going forward by Set-RadarMomentum, but the
 # radar kept dated full snapshots (data/history/YYYY-MM-DD.json) before the ledger
 # existed, and those snapshots prove an earlier sighting. This replays them oldest
@@ -23,7 +23,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 if (-not $HistoryDir) { $HistoryDir = Join-Path $root 'data\history' }
-$ledgerPath = Join-Path $HistoryDir 'metrics.json'
+$ledgerPath = Join-Path (Split-Path -Parent $HistoryDir) 'ledger.json'
 
 function Read-Json([string]$Path) {
     # -Encoding UTF8 also copes with a BOM left by an older run

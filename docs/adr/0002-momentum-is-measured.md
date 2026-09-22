@@ -28,7 +28,10 @@ did exactly that and produced a leaderboard of noise.
 normalised to a week, and a snapshot is only replaced once it is older than
 `heat.minBaselineHours` (12).**
 
-- `data/history/metrics.json` holds one baseline per item: metric and timestamp.
+- `data/ledger.json` holds one row per item: `firstSeen` with its basis, `lastSeen`,
+  and, for items carrying a metric, the momentum baseline and its timestamp.
+  It is **committed**, unlike everything else under `data/`: it is the only
+  artefact in the project that a fresh `sync.ps1` cannot reproduce.
 - On each sync, an item whose baseline is younger than the threshold carries that
   baseline forward untouched and reports **no** momentum.
 - Once the baseline matures, momentum is computed, and only then is the baseline

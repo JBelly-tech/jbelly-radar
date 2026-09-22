@@ -853,7 +853,7 @@ function Invoke-RadarSync {
     if (Test-Path $publishersPath) { $publishers = Get-Content -Raw -Encoding UTF8 $publishersPath | ConvertFrom-Json }
     Set-RadarPublishers -Items $items -Publishers $publishers -CachePath (Join-Path $Root 'data\history\orgs.json') -MaxLookups (Get-Prop $config.defaults 'orgLookupsPerSync' 20) -Quiet:$Quiet
 
-    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data\history\metrics.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
+    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data\ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
     Set-RadarHeat -Items $items -HeatConfig $config.heat
 
     $sorted = @($items | Sort-Object -Property @{ Expression = { $_.heat }; Descending = $true }, @{ Expression = { $_.ageDays }; Descending = $false })
