@@ -704,24 +704,102 @@ function Invoke-RadarSync {
     if (Test-Path $prevPath) { try { $previous = Get-Content -Raw -Encoding UTF8 $prevPath | ConvertFrom-Json } catch { $previous = $null } }
     Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done 0 -Total $enabled.Count -Current '' -Sources @()
 
+    # Fetching is 96% of a sync and every source waits on a different host, so the
+    # sources are fetched CONCURRENTLY. Windows PowerShell 5.1 has no
+    # ForEach-Object -Parallel, so this is a runspace pool: each worker dot-sources
+    # this file and calls one fetcher.
+    #
+    # Two invariants survive the change:
+    #   * results are merged in CONFIG ORDER, not completion order, because dedupe
+    #     is first-wins and config order is therefore priority order
+    #   * every per-source field - status, count, ms, message - means exactly what
+    #     it meant sequentially, and ms is still that source's own elapsed time
+    $maxParallel = [int](Get-Prop $config.defaults 'parallelFetches' 8)
+    if ($maxParallel -lt 1) { $maxParallel = 1 }
+    # .NET caps outbound connections per host at 2 by default, which would serialise
+    # the several sources that share a host (GitHub, Hugging Face).
+    if ([Net.ServicePointManager]::DefaultConnectionLimit -lt ($maxParallel * 4)) {
+        [Net.ServicePointManager]::DefaultConnectionLimit = $maxParallel * 4
+    }
+
+    $libPath = Join-Path $Root 'lib\sources.ps1'
+    $worker = {
+        param($LibPath, $Source, $Defaults)
+        . $LibPath
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        try {
+            $fetched = $null
+            switch ($Source.kind) {
+                'skills-sh'     { $fetched = Get-SkillsShItems -Source $Source -Defaults $Defaults }
+                'github-search' { $fetched = Get-GitHubItems   -Source $Source -Defaults $Defaults }
+                'hn'            { $fetched = Get-HnItems       -Source $Source -Defaults $Defaults }
+                'rss'           { $fetched = Get-RssItems      -Source $Source -Defaults $Defaults }
+                'json-api'      { $fetched = Get-JsonApiItems  -Source $Source -Defaults $Defaults }
+                default         { throw ("unknown source kind '" + $Source.kind + "' -- add a fetcher in lib/sources.ps1") }
+            }
+            $sw.Stop()
+            return [pscustomobject]@{ ok = $true; items = @($fetched); ms = [int]$sw.ElapsedMilliseconds; error = '' }
+        }
+        catch {
+            $sw.Stop()
+            return [pscustomobject]@{ ok = $false; items = @(); ms = [int]$sw.ElapsedMilliseconds; error = $_.Exception.Message }
+        }
+    }
+
+    # Measured: preloading the library through InitialSessionState.StartupScripts
+    # serialises runspace creation and doubled the sync (31 s -> 60 s). Each job
+    # dot-sourcing the file is the faster arrangement, counter-intuitive as it looks.
+    $pool = [runspacefactory]::CreateRunspacePool(1, $maxParallel)
+    $pool.ApartmentState = 'MTA'
+    $pool.Open()
+    $jobs = New-Object System.Collections.Generic.List[object]
+    $result = @{}
+    try {
+        foreach ($src in $config.sources) {
+            if (-not (Get-Prop $src 'enabled' $true)) { continue }
+            $ps = [powershell]::Create()
+            $ps.RunspacePool = $pool
+            [void]$ps.AddScript($worker).AddArgument($libPath).AddArgument($src).AddArgument($config.defaults)
+            $jobs.Add([pscustomobject]@{ src = $src; ps = $ps; handle = $ps.BeginInvoke() })
+        }
+
+        # report progress while they run; the listener polls status.json meanwhile
+        $lastWrite = [datetime]::UtcNow.AddSeconds(-10)
+        while ($true) {
+            $finished = @($jobs | Where-Object { $_.handle.IsCompleted }).Count
+            if (([datetime]::UtcNow - $lastWrite).TotalMilliseconds -ge 500 -or $finished -eq $jobs.Count) {
+                $current = ''
+                $running = @($jobs | Where-Object { -not $_.handle.IsCompleted })
+                if ($running.Count -gt 0) { $current = $running[0].src.label }
+                try { Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done $finished -Total $enabled.Count -Current $current -Sources $health } catch { }
+                $lastWrite = [datetime]::UtcNow
+            }
+            if ($finished -eq $jobs.Count) { break }
+            Start-Sleep -Milliseconds 120
+        }
+    }
+    finally {
+        foreach ($j in $jobs) {
+            $r = $null
+            try { $r = @($j.ps.EndInvoke($j.handle)) | Select-Object -First 1 } catch { $r = $null }
+            if ($null -eq $r) {
+                $r = [pscustomobject]@{ ok = $false; items = @(); ms = 0; error = 'worker produced no result' }
+            }
+            $result[$j.src.id] = $r
+            $j.ps.Dispose()
+        }
+        $pool.Close(); $pool.Dispose()
+    }
+
+    # merge in CONFIG ORDER: dedupe is first-wins, so this is the priority order
     foreach ($src in $config.sources) {
         if (-not (Get-Prop $src 'enabled' $true)) {
             $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'disabled'; count = 0; message = 'disabled in config'; ms = 0 })
             continue
         }
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        try {
-            try { Write-RadarStatus -Path $statusPath -State 'syncing' -StartedAt $started -Done $done -Total $enabled.Count -Current $src.label -Sources $health } catch { }
-            $fetched = $null
-            switch ($src.kind) {
-                'skills-sh'     { $fetched = Get-SkillsShItems -Source $src -Defaults $config.defaults }
-                'github-search' { $fetched = Get-GitHubItems   -Source $src -Defaults $config.defaults }
-                'hn'            { $fetched = Get-HnItems       -Source $src -Defaults $config.defaults }
-                'rss'           { $fetched = Get-RssItems      -Source $src -Defaults $config.defaults }
-                'json-api'      { $fetched = Get-JsonApiItems  -Source $src -Defaults $config.defaults }
-                default         { throw "unknown source kind '$($src.kind)' -- add a fetcher in lib/sources.ps1" }
-            }
-            $sw.Stop()
+        $r = $result[$src.id]
+        if ($r.ok) {
+            $fetched = @($r.items)
             # Optional per-source regex gates. A broad feed (a whole "Innovation"
             # section) carries puzzles and horoscopes next to the technology it is
             # here for; these keep the filtering in config, not in a fetcher.
@@ -734,16 +812,14 @@ function Invoke-RadarSync {
             foreach ($f in $fetched) { $all.Add($f) }
             $status = 'empty'
             if ($n -gt 0) { $status = 'ok' }
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $n; message = ''; ms = [int]$sw.ElapsedMilliseconds })
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $n; message = ''; ms = $r.ms })
             if (-not $Quiet) {
                 $colour = 'DarkGray'
                 if ($n -eq 0) { $colour = 'DarkYellow' }
-                Write-Host ("  {0,-22} {1,4} items {2,6} ms" -f $src.id, $n, $sw.ElapsedMilliseconds) -ForegroundColor $colour
+                Write-Host ("  {0,-22} {1,4} items {2,6} ms" -f $src.id, $n, $r.ms) -ForegroundColor $colour
             }
         }
-        catch {
-            $sw.Stop()
-            $msg = $_.Exception.Message
+        else {
             # Stale-while-error: a feed that answers 429 once must not vanish from
             # the radar for a whole cycle. Its items from the previous run are kept
             # and the source is reported as stale, not failed, when there were any.
@@ -752,10 +828,9 @@ function Invoke-RadarSync {
             foreach ($k in $kept) { $all.Add($k) }
             $status = 'failed'
             if ($kept.Count -gt 0) { $status = 'stale' }
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $kept.Count; message = $msg; ms = [int]$sw.ElapsedMilliseconds })
-            if (-not $Quiet) { Write-Host ("  {0,-22} {1}  {2}" -f $src.id, $status.ToUpper(), $msg) -ForegroundColor DarkRed }
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $kept.Count; message = $r.error; ms = $r.ms })
+            if (-not $Quiet) { Write-Host ("  {0,-22} {1}  {2}" -f $src.id, $status.ToUpper(), $r.error) -ForegroundColor DarkRed }
         }
-        $done++
     }
 
     # dedupe by canonical URL: first source wins, so order in config is priority order

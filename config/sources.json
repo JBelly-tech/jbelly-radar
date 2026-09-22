@@ -3,6 +3,8 @@
   "$comment": "Add a source = add an object here. No code change as long as kind is one of: skills-sh | github-search | hn | rss | json-api. See README.md > Adding a source.",
   "defaults": {
     "timeoutSec": 30,
+    "parallelFetches": 8,
+    "$parallelFetches": "How many sources are fetched at once. Fetching is almost all of a sync and each source waits on a different host, so this sets the wall clock: at 1 the sync is sequential, and above that it is roughly the slowest single source. Raise it if your network is fast, lower it if a host starts rate-limiting you.",
     "maxItems": 25,
     "userAgent": "jbelly-radar/1.0 (local research dashboard; +https://github.com/mohammadJohar/jbelly-radar)",
     "$userAgent": "Identify honestly. A source that only answers a browser user agent is a source saying no: disable it or use its documented API. Never put a Mozilla/5.0 prefix here.",
