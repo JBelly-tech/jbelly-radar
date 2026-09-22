@@ -648,6 +648,8 @@
       "popularity": 0.35,
       "momentum": 0.25
     },
+    "confidenceFloor": 0.7,
+    "$confidenceFloor": "How much of its score an item keeps when only one of the three terms could be measured. A term with no data is dropped and the rest renormalised, so without this an item measured on freshness alone would score full marks and tie with one that also has popularity and momentum. 1.0 turns the discount off. Each item's heatBasis records what was actually measured and the confidence applied.",
     "categories": {
       "skill": {
         "halfLifeDays": 14,

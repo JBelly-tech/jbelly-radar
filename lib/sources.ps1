@@ -124,6 +124,7 @@ function New-RadarItem {
         firstSeenBasis = $null
         daysOnRadar    = $null
         heat        = 0
+        heatBasis   = ''
         tags        = @($Tags | Where-Object { $_ } | Select-Object -First 6)
         spark       = $Spark
         install     = $Install
@@ -384,22 +385,83 @@ function Set-RadarHeat {
         $halfLife = [double](Get-Prop $cat 'halfLifeDays' 7)
         $ceiling  = [double](Get-Prop $cat 'metricCeiling' 1)
 
-        $age = $halfLife
-        if ($null -ne $it.ageDays) { $age = [math]::Max([double]$it.ageDays, 0) }
-        $recency = [math]::Exp(-[math]::Log(2) * $age / $halfLife)
+        # A missing signal is not a mid-range signal. Substituting 0.5 for a term we
+        # cannot measure does not express uncertainty, it manufactures a number and
+        # then hides it inside a total: with metricCeiling = 1 and no momentum, the
+        # old code scored every news and release item as 0.4*recency + 0.30, which is
+        # age wearing the word "heat". A term we cannot measure is DROPPED and the
+        # remaining weights are renormalised, so heat always means "of what we could
+        # actually measure here", and heatBasis says which terms those were.
+        $num = 0.0
+        $den = 0.0
+        $totalW = [double]$w.recency + [double]$w.popularity + [double]$w.momentum
+        $basis = New-Object System.Collections.Generic.List[string]
 
-        $popularity = 0.5
+        # recency — prefer the source's own date; fall back to the day this radar
+        # first saw the item, which is an observation we made rather than a guess
+        $age = $null
+        $ageFrom = ''
+        if ($null -ne $it.ageDays) { $age = [math]::Max([double]$it.ageDays, 0); $ageFrom = 'published' }
+        elseif ($null -ne $it.daysOnRadar) { $age = [math]::Max([double]$it.daysOnRadar, 0); $ageFrom = 'firstSeen' }
+        if ($null -ne $age) {
+            $recency = [math]::Exp(-[math]::Log(2) * $age / $halfLife)
+            $num += [double]$w.recency * $recency; $den += [double]$w.recency
+            $basis.Add('recency:' + $ageFrom)
+        }
+
+        # popularity — only where the category declares a real ceiling to scale against
         if ($ceiling -gt 1 -and $null -ne $it.metric) {
             $popularity = [math]::Min(1.0, [math]::Log10(1 + [double]$it.metric) / [math]::Log10(1 + $ceiling))
+            $num += [double]$w.popularity * $popularity; $den += [double]$w.popularity
+            $basis.Add('popularity')
+        }
+        elseif ($null -ne $it.publisher) {
+            # A news item or a release carries no star count, so popularity cannot be
+            # measured at all — but WHO published it is a quality signal we already
+            # resolved, and it is the only one these categories have. Without it a
+            # routine alpha tag from an unknown account scores the same as a major
+            # release, because freshness would be the only term in the sum.
+            $tier = [int](Get-Prop $it.publisher 'tier' 0)
+            $rep = $null
+            if ($tier -eq 1) { $rep = 1.0 }
+            elseif ($tier -eq 2) { $rep = 0.75 }
+            elseif ($tier -eq 3) { $rep = 0.5 }
+            elseif ((Get-Prop $it.publisher 'verified' $false) -eq $true) { $rep = 0.35 }
+            if ($null -ne $rep) {
+                $num += [double]$w.popularity * $rep; $den += [double]$w.popularity
+                $basis.Add('reputation')
+            }
         }
 
-        $momentumNorm = $popularity
+        # momentum — measured against a baseline, or absent. Never copied from another term.
         if ($null -ne $it.momentum) {
             $momentumNorm = [math]::Max(0.0, [math]::Min(1.0, 0.5 + ([double]$it.momentum / 200.0)))
+            $num += [double]$w.momentum * $momentumNorm; $den += [double]$w.momentum
+            $basis.Add('momentum')
         }
 
-        $score = ([double]$w.recency * $recency) + ([double]$w.popularity * $popularity) + ([double]$w.momentum * $momentumNorm)
+        if ($den -gt 0) {
+            $score = $num / $den
+
+            # Renormalising alone makes every category internally honest and then
+            # makes them incomparable: an item with one measurable term scores full
+            # marks on that one term, so a routine alpha tag published an hour ago
+            # ties with a major release carrying stars and momentum. Confidence is
+            # how much of the total weight we could actually measure, and it scales
+            # the result, so more evidence can outrank less. confidenceFloor is what
+            # a single-signal item keeps; at 1.0 the discount is off entirely.
+            $floor = [double](Get-Prop $HeatConfig 'confidenceFloor' 0.7)
+            $confidence = $floor + ((1.0 - $floor) * ($den / $totalW))
+            $score = $score * $confidence
+            $basis.Add('conf:' + [math]::Round($confidence, 2))
+        }
+        else {
+            # nothing measurable at all: say so rather than inventing a middle
+            $score = 0.0
+            $basis.Add('none')
+        }
         $it.heat = [int][math]::Round(100 * [math]::Max(0.0, [math]::Min(1.0, $score)))
+        $it.heatBasis = ($basis -join '+')
     }
 }
 
