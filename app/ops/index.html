@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar · operator</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* The operator console. Same product, same tokens, same compact density as the
+   dashboard — no second design system, no build step, no dependency. It reads
+   the artifact the sync already writes; there is no backend behind this page. */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--background); color: var(--foreground);
+  font: 13px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.mono, code { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1180px; margin-inline: auto; padding-inline: 20px; padding-block: 0; }
+
+header.top { border-block-end: 1px solid var(--border); background: var(--card); }
+.top .wrap { padding-block: 18px 16px; display: flex; flex-wrap: wrap; gap: 20px; align-items: baseline; justify-content: space-between; }
+h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+h1 small { color: var(--muted-foreground); font-weight: 400; font-size: 12px; margin-inline-start: 8px; }
+.top-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fact {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  border: 1px solid var(--border); border-radius: var(--radius-control);
+  padding: 3px 9px; font-size: 11.5px; color: var(--muted-foreground);
+  background: var(--background);
+}
+.fact b { color: var(--foreground); font-weight: 500; font-variant-numeric: tabular-nums; }
+.fact.bad b { color: var(--destructive); }
+.fact.warn b { color: var(--warning); }
+
+section { padding-block: 26px; }
+section + section { border-block-start: 1px solid var(--border); }
+h2 { font-size: 14px; font-weight: 600; margin: 0 0 3px; letter-spacing: -0.005em; }
+.sub { color: var(--muted-foreground); margin: 0 0 16px; font-size: 12.5px; max-width: 74ch; }
+
+.card { border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--card); overflow: hidden; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; inline-size: 100%; min-inline-size: 640px; font-size: 12.5px; }
+th, td { padding: 7px 14px; text-align: start; border-block-end: 1px solid var(--border); white-space: nowrap; }
+thead th {
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted-foreground); font-weight: 500; background: var(--background);
+  position: sticky; inset-block-start: 0;
+}
+tbody tr:last-child td { border-block-end: none; }
+tbody tr:hover { background: var(--accent); }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: end; }
+td.id { font-family: var(--font-mono); color: var(--foreground); }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; }
+.pill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.ok { color: var(--success); }
+.warnc { color: var(--warning); }
+.bad { color: var(--destructive); }
+.dim { color: var(--muted-foreground); }
+
+/* a meter reads faster than a number for a share, and the number stays beside it */
+.meter { display: flex; align-items: center; gap: 9px; min-inline-size: 190px; }
+.meter .track { flex: 1; block-size: 6px; border-radius: 100px; background: var(--secondary); overflow: hidden; }
+.meter .fill { display: block; block-size: 100%; border-radius: 100px; background: var(--heat-3); }
+.meter .fill.low { background: var(--destructive); }
+.meter .fill.mid { background: var(--warning); }
+.meter .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11.5px; min-inline-size: 5.5ch; text-align: end; }
+
+.quality { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.q {
+  border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--card); padding: 14px 16px; min-inline-size: 0;
+}
+.q h3 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+.q .why { color: var(--muted-foreground); font-size: 12px; margin: 0 0 10px; }
+.q .act { font-size: 12px; margin: 10px 0 0; padding-block-start: 10px; border-block-start: 1px solid var(--border); color: var(--muted-foreground); }
+.q .act b { color: var(--foreground); font-weight: 500; }
+
+.bars { display: flex; flex-direction: column; gap: 7px; }
+.bar-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font-size: 12px; }
+.bar-row > span:first-child { color: var(--muted-foreground); }
+
+.reserved { border: 1px dashed var(--border); border-radius: var(--radius-card); padding: 16px; color: var(--muted-foreground); font-size: 12.5px; }
+.reserved b { color: var(--foreground); font-weight: 600; display: block; margin-block-end: 4px; font-size: 13px; }
+
+.state { padding: 28px 16px; text-align: center; color: var(--muted-foreground); font-size: 13px; }
+.state b { display: block; color: var(--foreground); font-size: 14px; margin-block-end: 4px; }
+.skel { block-size: 9px; border-radius: 4px; background: var(--secondary); animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
+.skels { display: flex; flex-direction: column; gap: 9px; padding: 16px; }
+
+footer { border-block-start: 1px solid var(--border); padding-block: 18px 32px; color: var(--muted-foreground); font-size: 12px; }
+footer a { color: var(--primary); }
+
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Radar · operator <small>what the machine did, and whether to believe it</small></h1>
+    <div class="top-facts" id="facts"></div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="wrap">
+      <h2>Source health</h2>
+      <p class="sub">
+        One row per configured source. <b>fetched</b> is what the source returned,
+        <b>kept</b> is what survived that source's regex filters, and <b>at cap</b>
+        means fetched reached <code>maxItems</code> — the source stopped because of
+        the configuration, not because it ran out, so it is hiding more than it shows.
+        A row with kept far below fetched is a filter doing its job, not a fault.
+      </p>
+      <div class="card">
+        <div class="tablewrap">
+          <table id="sources">
+            <thead><tr>
+              <th>source</th><th>kind</th><th>status</th>
+              <th style="text-align:end">kept</th><th style="text-align:end">fetched</th>
+              <th style="text-align:end">cap</th>
+              <th>at cap</th><th style="text-align:end">ms</th><th>message</th>
+            </tr></thead>
+            <tbody><tr><td colspan="9"><div class="skels"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Data quality</h2>
+      <p class="sub">
+        What share of the corpus each signal actually covers. This is the section that
+        exists because a defect affecting 43% of items sat unnoticed: heat was being
+        computed from terms most items did not carry.
+      </p>
+      <div class="quality" id="quality"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Content signal</h2>
+      <p class="sub">
+        What actually arrived, by the day this radar first saw it — not by the
+        publisher's own date, which means a different thing in every feed.
+      </p>
+      <div class="quality" id="signal"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Demand signal</h2>
+      <div class="reserved">
+        <b>Not collected.</b>
+        Which verticals and technologies readers look at would say which industries are
+        asking for what — the one thing here with commercial value. It is deliberately
+        empty: personalisation is computed in the reader's own browser and never
+        transmitted, and nothing aggregated exists to show. Turning this on is a
+        decision with a disclosure and a consent attached, not a default.
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Reads <code>/api/data</code> and <code>/api/status</code>, the same artifact the
+    dashboard reads. No separate backend, no stored state, nothing written.
+    <a href="../">← dashboard</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var pct = function (n, d) { return d > 0 ? Math.round(1000 * n / d) / 10 : 0; };
+
+  function meter(share, invert) {
+    var cls = share >= 80 ? '' : (share >= 50 ? 'mid' : 'low');
+    if (invert) { cls = share <= 20 ? '' : (share <= 50 ? 'mid' : 'low'); }
+    return '<div class="meter"><span class="track"><i class="fill ' + cls +
+      '" style="inline-size:' + Math.max(0, Math.min(100, share)) + '%"></i></span>' +
+      '<span class="val">' + share.toFixed(1) + '%</span></div>';
+  }
+
+  function fail(msg) {
+    document.querySelector('main').innerHTML =
+      '<div class="wrap"><div class="state"><b>Could not read the radar</b>' + esc(msg) +
+      '<br>Start it with <code>.\\radar.ps1</code> and reload.</div></div>';
+  }
+
+  function render(d, status) {
+    var items = d.items || [], n = items.length;
+    var srcs = d.sources || [];
+    var ok = srcs.filter(function (s) { return s.status === 'ok'; });
+    var broken = srcs.filter(function (s) { return s.status === 'failed' || s.status === 'stale'; });
+    var sat = ok.filter(function (s) { return s.saturated; });
+
+    // ── header facts ────────────────────────────────────────────────────────
+    var age = d.generatedAt ? Math.round((Date.now() - new Date(d.generatedAt)) / 60000) : null;
+    var f = [
+      ['items', n, ''],
+      ['sources ok', ok.length + '/' + srcs.filter(function (s) { return s.status !== 'disabled'; }).length,
+        broken.length ? 'bad' : ''],
+      ['at cap', sat.length + '/' + ok.length, sat.length > ok.length / 2 ? 'warn' : ''],
+      ['sync', (d.durationMs / 1000).toFixed(1) + ' s', ''],
+      ['data age', age === null ? '—' : age + ' min', age !== null && age > 120 ? 'warn' : '']
+    ];
+    $('facts').innerHTML = f.map(function (x) {
+      return '<span class="fact ' + x[2] + '">' + esc(x[0]) + ' <b>' + esc(x[1]) + '</b></span>';
+    }).join('');
+
+    // ── source health ───────────────────────────────────────────────────────
+    var rank = { failed: 0, stale: 1, empty: 2, ok: 3, disabled: 4 };
+    var rows = srcs.slice().sort(function (a, b) {
+      return (rank[a.status] - rank[b.status]) || (b.ms || 0) - (a.ms || 0);
+    }).map(function (s) {
+      var cls = s.status === 'ok' ? 'ok' : (s.status === 'disabled' ? 'dim' :
+                (s.status === 'stale' || s.status === 'empty' ? 'warnc' : 'bad'));
+      return '<tr>' +
+        '<td class="id">' + esc(s.id) + '</td>' +
+        '<td class="dim">' + esc(s.category) + '</td>' +
+        '<td><span class="pill ' + cls + '">' + esc(s.status) + '</span></td>' +
+        '<td class="n">' + (s.count != null ? s.count : '—') + '</td>' +
+        '<td class="n dim">' + (s.fetched != null ? s.fetched : '—') + '</td>' +
+        '<td class="n dim">' + (s.cap ? s.cap : '—') + '</td>' +
+        '<td>' + (s.saturated ? '<span class="pill warnc">at cap</span>' : '<span class="dim">—</span>') + '</td>' +
+        '<td class="n dim">' + (s.ms != null ? s.ms : '—') + '</td>' +
+        '<td class="dim">' + esc((s.message || '').slice(0, 64)) + '</td>' +
+        '</tr>';
+    }).join('');
+    $('sources').querySelector('tbody').innerHTML = rows ||
+      '<tr><td colspan="9"><div class="state"><b>No sources</b>The sync has not run yet.</div></td></tr>';
+
+    // ── data quality ────────────────────────────────────────────────────────
+    var have = function (fn) { return items.filter(fn).length; };
+    var cov = [
+      ['publisher resolved', have(function (i) { return i.publisher; }),
+       'Reputation is a ranking term and a highlight. Where it is missing the item is judged on less.',
+       'Add the organisation to <b>config/publishers.json</b>, or check platformHosts is not swallowing the owner.'],
+      ['technology tagged', have(function (i) { return i.tech && i.tech.length; }),
+       'Relevance, the vertical advice and every technology filter run on these tags.',
+       'Add keywords to <b>config/taxonomy.json</b> for the words these items actually use.'],
+      ['published date', have(function (i) { return i.published; }),
+       'Without it recency falls back to the day we first saw the item, which is later than the truth.',
+       'Check the fetcher for that source — a feed almost always carries a date somewhere.'],
+      ['popularity metric', have(function (i) { return i.metric != null; }),
+       'Stars, installs or points. Absent, popularity cannot be measured at all.',
+       'Only some categories can have one. Watch this per category, not overall.'],
+      ['momentum measured', have(function (i) { return i.momentum != null; }),
+       'Needs a baseline at least 12 hours old, so it climbs as the ledger fills.',
+       'Nothing to fix if the radar is young — it should rise day over day.']
+    ];
+    var qHtml = '<div class="q"><h3>Signal coverage</h3><p class="why">Share of ' + n +
+      ' items carrying each signal. Low is not always a fault, but it is always a limit on what heat can mean.</p><div class="bars">' +
+      cov.map(function (c) {
+        return '<div class="bar-row"><span>' + esc(c[0]) + '</span>' + meter(pct(c[1], n)) + '</div>';
+      }).join('') + '</div><p class="act">' + cov[0][3] + '</p></div>';
+
+    // heat basis: the distribution that makes a degeneracy visible instead of silent
+    var basis = {};
+    items.forEach(function (i) {
+      var b = (i.heatBasis || '—').replace(/\+?conf:[\d.]+/, '') || 'none';
+      basis[b] = (basis[b] || 0) + 1;
+    });
+    var bKeys = Object.keys(basis).sort(function (a, b) { return basis[b] - basis[a]; });
+    var lone = bKeys.filter(function (k) { return k.indexOf('+') === -1; })
+                    .reduce(function (t, k) { return t + basis[k]; }, 0);
+    qHtml += '<div class="q"><h3>What heat was computed from</h3>' +
+      '<p class="why">A term with no data is dropped and the rest renormalised. If one row here holds most of the corpus, heat is measuring one thing and calling it three.</p><div class="bars">' +
+      bKeys.map(function (k) {
+        return '<div class="bar-row"><span class="mono" style="font-size:11px">' + esc(k) + '</span>' + meter(pct(basis[k], n)) + '</div>';
+      }).join('') + '</div><p class="act"><b>' + pct(lone, n).toFixed(1) +
+      '%</b> of items are scored on a single term. Above roughly half, heat stops being comparable across categories.</p></div>';
+
+    // first-seen basis: how much of the record is a real observation
+    var fs = { observed: 0, 'snapshot-floor': 0, none: 0 };
+    items.forEach(function (i) { var b = i.firstSeenBasis || 'none'; fs[b] = (fs[b] || 0) + 1; });
+    qHtml += '<div class="q"><h3>How dated the record is</h3>' +
+      '<p class="why"><b>observed</b> means this radar watched the item arrive. <b>snapshot-floor</b> means it was already there when the record began, so its true date is that day or earlier.</p><div class="bars">' +
+      ['observed', 'snapshot-floor', 'none'].filter(function (k) { return fs[k]; }).map(function (k) {
+        return '<div class="bar-row"><span>' + esc(k) + '</span>' + meter(pct(fs[k], n)) + '</div>';
+      }).join('') + '</div><p class="act">A floor must be shown as <b>“seen by”</b>, never as “first appeared”. The observed share only grows with time and cannot be backfilled.</p></div>';
+    $('quality').innerHTML = qHtml;
+
+    // ── content signal ──────────────────────────────────────────────────────
+    var byDay = {}, byCat = {}, byTech = {};
+    items.forEach(function (i) {
+      var d0 = (i.firstSeen || '').slice(0, 10) || 'unknown';
+      byDay[d0] = (byDay[d0] || 0) + 1;
+      if ((i.daysOnRadar != null) && i.daysOnRadar < 1) {
+        byCat[i.category] = (byCat[i.category] || 0) + 1;
+        (i.tech || []).forEach(function (t) { byTech[t] = (byTech[t] || 0) + 1; });
+      }
+    });
+    var days = Object.keys(byDay).sort();
+    var maxDay = Math.max.apply(null, days.map(function (k) { return byDay[k]; }).concat([1]));
+    var sHtml = '<div class="q"><h3>First seen, by day</h3>' +
+      '<p class="why">How many items entered the radar each day. The oldest column is a floor, not a spike: everything already present when the record began lands there.</p><div class="bars">' +
+      days.map(function (k) {
+        return '<div class="bar-row"><span class="mono" style="font-size:11px">' + esc(k) + '</span>' +
+          '<div class="meter"><span class="track"><i class="fill" style="inline-size:' +
+          Math.round(100 * byDay[k] / maxDay) + '%"></i></span><span class="val">' + byDay[k] + '</span></div></div>';
+      }).join('') + '</div><p class="act">A day with <b>zero</b> new items means the sync did not run, not that nothing happened.</p></div>';
+
+    var newToday = Object.keys(byCat).reduce(function (t, k) { return t + byCat[k]; }, 0);
+    var catKeys = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; });
+    var maxCat = Math.max.apply(null, catKeys.map(function (k) { return byCat[k]; }).concat([1]));
+    sHtml += '<div class="q"><h3>New in the last 24 hours</h3>' +
+      '<p class="why">' + newToday + ' items, by category.</p><div class="bars">' +
+      (catKeys.length ? catKeys.map(function (k) {
+        return '<div class="bar-row"><span>' + esc(k) + '</span>' +
+          '<div class="meter"><span class="track"><i class="fill" style="inline-size:' +
+          Math.round(100 * byCat[k] / maxCat) + '%"></i></span><span class="val">' + byCat[k] + '</span></div></div>';
+      }).join('') : '<span class="dim">Nothing new since the last sync.</span>') +
+      '</div><p class="act">This is the supply a weekly brief draws on. <b>Thin here</b> means the brief has nothing to say.</p></div>';
+
+    var techKeys = Object.keys(byTech).sort(function (a, b) { return byTech[b] - byTech[a]; }).slice(0, 10);
+    var maxTech = Math.max.apply(null, techKeys.map(function (k) { return byTech[k]; }).concat([1]));
+    sHtml += '<div class="q"><h3>Technologies moving today</h3>' +
+      '<p class="why">Tags on the items that arrived in the last 24 hours, most first.</p><div class="bars">' +
+      (techKeys.length ? techKeys.map(function (k) {
+        return '<div class="bar-row"><span>' + esc(k) + '</span>' +
+          '<div class="meter"><span class="track"><i class="fill" style="inline-size:' +
+          Math.round(100 * byTech[k] / maxTech) + '%"></i></span><span class="val">' + byTech[k] + '</span></div></div>';
+      }).join('') : '<span class="dim">No tagged arrivals yet today.</span>') +
+      '</div><p class="act">A vertical whose technologies keep appearing here is the one to <b>write the next brief about</b>.</p></div>';
+    $('signal').innerHTML = sHtml;
+  }
+
+  function load() {
+    var bust = '?t=' + Date.now();
+    Promise.all([
+      fetch('/api/data' + bust, { cache: 'no-store' }).then(function (r) {
+        if (!r.ok) { throw new Error('no data yet — run a sync'); } return r.json(); }),
+      fetch('/api/status' + bust, { cache: 'no-store' }).then(function (r) {
+        return r.ok ? r.json() : null; }).catch(function () { return null; })
+    ]).then(function (v) { render(v[0], v[1]); })
+      .catch(function (e) { fail(e && e.message ? e.message : String(e)); });
+  }
+
+  load();
+  // the dashboard polls every 45 s idle; this is an instrument, not a feed
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>

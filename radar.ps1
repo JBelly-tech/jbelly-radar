@@ -186,7 +186,11 @@ try {
                 continue
             }
 
-            if ($path -eq '/app/' -or $path -eq '/app') { $path = '/app/index.html' }
+            # A directory resolves to its index, the way any static host behaves:
+            # /app/ -> /app/index.html, /app/ops/ -> /app/ops/index.html. Naming each
+            # directory here instead would mean editing the server to add a page.
+            if ($path -eq '/app') { $path = '/app/' }
+            if ($path.EndsWith('/')) { $path = $path + 'index.html' }
 
             # Static file, confined to the project folder.
             $relative = $path.TrimStart('/').Replace('/', '\')
