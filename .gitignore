@@ -27,3 +27,6 @@ data/sync.lock
 # scripts/brief.ps1. A brief you have actually SENT is a different thing — move
 # it out of this folder and commit it, because a sent claim needs a record.
 content/briefs/
+
+# demo bundles built by scripts/pack-demo.ps1 and attached to a release
+dist/
