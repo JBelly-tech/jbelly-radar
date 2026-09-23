@@ -91,21 +91,43 @@ foreach ($p in $ledgerRaw.PSObject.Properties) {
         summary = ("" + (Get-P $r 'summary' '')).ToLowerInvariant()
         author  = ("" + (Get-P $r 'author' '')).ToLowerInvariant()
         metric  = (Get-P $r 'metric' $null)
+        unit    = ("" + (Get-P $r 'metricLabel' ''))
         tier    = (Get-P $r 'publisherTier' $null)
     })
 }
 if ($catalogue.Count -eq 0) { Write-Output 'the ledger holds no named rows - run a sync first'; exit 1 }
 
-# The usage floor is the MEDIAN of the catalogue for that kind, computed here and
-# not written into the script. Skills and MCP servers are three orders of
-# magnitude apart (median 82,554 installs against 7,889 uses at the time of
-# writing), so one hardcoded number would call every MCP server weak; and any
-# number frozen in a script rots as the catalogue grows.
+# The usage floor is the catalogue's own median, computed here rather than frozen
+# into the script, and keyed by KIND AND UNIT.
+#
+# The unit is the part that is easy to get wrong, and this script got it wrong.
+# A kind does not have one unit: skills arrive measured in installs from the
+# directory and in stars from GitHub, MCP servers in weekly downloads, uses and
+# stars. Taking one median per kind compares them to each other. Measured on the
+# live ledger, the single skill median was 82,554 while the median of the 198
+# star-measured skills was 918 -- so two of them could ever clear the bar, and
+# every GitHub-sourced project was structurally excluded from being called
+# strong. The report still said "usage above the catalogue median for its kind",
+# which was true and meant nothing.
+#
+# A unit with too few rows has no trustworthy median, so it gets no usage floor
+# at all and those rows lean on the publisher tier instead. Guessing a floor from
+# four data points is the same mistake one step smaller.
+$minForFloor = 8
 $median = @{}
-foreach ($kind in @('skill', 'mcp', 'other')) {
-    $vals = @($catalogue | Where-Object { $_.kind -eq $kind -and $null -ne $_.metric } |
-        ForEach-Object { [double]$_.metric } | Sort-Object)
-    if ($vals.Count -gt 0) { $median[$kind] = $vals[[int]($vals.Count / 2)] } else { $median[$kind] = 0 }
+$unitCount = @{}
+foreach ($c in $catalogue) {
+    if ($null -eq $c.metric) { continue }
+    # A number whose unit nobody recorded cannot be compared to anything, so it
+    # forms no floor and clears none. That is the same rule one size smaller.
+    if (-not $c.unit) { continue }
+    $key = $c.kind + '|' + $c.unit
+    if (-not $unitCount.ContainsKey($key)) { $unitCount[$key] = New-Object System.Collections.Generic.List[double] }
+    $unitCount[$key].Add([double]$c.metric)
+}
+foreach ($key in $unitCount.Keys) {
+    $vals = @($unitCount[$key] | Sort-Object)
+    if ($vals.Count -ge $minForFloor) { $median[$key] = $vals[[int]($vals.Count / 2)] }
 }
 
 # -- matching -----------------------------------------------------------------
@@ -178,7 +200,13 @@ function Get-Matches {
         }
         if ($score -eq 0) { continue }
 
-        $backed = ($null -ne $c.tier) -or (($null -ne $c.metric) -and ([double]$c.metric -ge $median[$c.kind]))
+        # a known publisher, or usage above the median for THIS unit; a unit with
+        # no established floor cannot vouch for anything, so it does not try
+        $backed = ($null -ne $c.tier)
+        if (-not $backed -and $null -ne $c.metric) {
+            $key = $c.kind + '|' + $c.unit
+            if ($median.ContainsKey($key)) { $backed = ([double]$c.metric -ge $median[$key]) }
+        }
         $out.Add([pscustomobject]@{
             row = $c.row; kind = $c.kind; score = $score; sharp = $sharp
             strong = ($sharp -and $backed); hits = ($hitWords | Select-Object -Unique)
@@ -360,7 +388,17 @@ $arPath = Write-Report -Lang 'ar' -T $template.ar
 if (-not $Quiet) {
     Write-Output ("catalogue: {0} named rows ({1} skills, {2} MCP servers), {3} anonymous" -f
         $catalogue.Count, $skillCount, $mcpCount, $anonymous)
-    Write-Output ("usage floor (catalogue median): skill {0:N0}, mcp {1:N0}" -f $median['skill'], $median['mcp'])
+    Write-Output 'usage floor, per kind and unit (the catalogue median; a unit with fewer'
+    Write-Output ("than {0} rows gets none and leans on the publisher tier instead):" -f $minForFloor)
+    foreach ($key in ($unitCount.Keys | Sort-Object)) {
+        $parts = $key -split '\|'
+        if ($parts[0] -eq 'other') { continue }
+        $unitName = $parts[1]
+        if (-not $unitName) { $unitName = '(no unit given)' }
+        $floor = 'none'
+        if ($median.ContainsKey($key)) { $floor = ('{0:N0}' -f $median[$key]) }
+        Write-Output ("  {0,-6} {1,-18} n={2,-5} floor {3}" -f $parts[0], $unitName, $unitCount[$key].Count, $floor)
+    }
     Write-Output ''
     Write-Output ("{0,-18} {1,-9} {2,-6} {3}" -f 'requirement', 'status', 'hits', 'strongest')
     foreach ($res in $results) {

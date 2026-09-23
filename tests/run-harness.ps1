@@ -153,8 +153,15 @@ function Get-HarnessOutput {
     # macOS. Start-Process joins ArgumentList on spaces, so an unquoted path
     # splits into two arguments, Chromium never gets a usable profile, and the
     # only symptom is a page that produces no output at all.
+    # --disable-dev-shm-usage: a container gives /dev/shm 64 MB, which Chromium
+    # exhausts and then dies mid-load. --disable-dbus and the background flags
+    # silence a service bus that does not exist on a CI runner; without them the
+    # log fills with dbus errors and the page can stall waiting on them.
     $procArgs = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
                   '--disable-extensions', '--remote-debugging-port=0',
+                  '--disable-dev-shm-usage', '--disable-dbus',
+                  '--disable-background-networking', '--disable-sync',
+                  '--disable-default-apps', '--no-default-browser-check',
                   ('--user-data-dir="' + $ProfileDir + '"'), $Url)
     # -WindowStyle is a Windows-only parameter: pwsh on Linux and macOS rejects
     # it outright rather than ignoring it. Headless has no window anyway, so it
