@@ -22,6 +22,7 @@
       "enabled": true,
       "url": "https://www.skills.sh/",
       "maxItems": 120,
+      "catalogueMax": 1000,
       "weeklyOrder": "newest-first"
     },
     {
@@ -33,7 +34,8 @@
       "query": "topic:claude-skill",
       "createdWithinDays": 120,
       "sort": "stars",
-      "maxItems": 20
+      "maxItems": 20,
+      "catalogueMax": 100
     },
     {
       "id": "gh-agent-skills",
@@ -44,7 +46,8 @@
       "query": "topic:agent-skills",
       "createdWithinDays": 180,
       "sort": "stars",
-      "maxItems": 15
+      "maxItems": 15,
+      "catalogueMax": 100
     },
     {
       "id": "gh-mcp-servers",
@@ -55,7 +58,8 @@
       "query": "topic:mcp-server",
       "createdWithinDays": 60,
       "sort": "stars",
-      "maxItems": 20
+      "maxItems": 20,
+      "catalogueMax": 100
     },
     {
       "id": "gh-ai-rising",
@@ -541,9 +545,10 @@
       "kind": "json-api",
       "category": "repo",
       "enabled": true,
-      "url": "https://registry.modelcontextprotocol.io/v0/servers?limit=50&version=latest",
+      "url": "https://registry.modelcontextprotocol.io/v0/servers?limit=100&version=latest",
       "itemPath": "servers",
       "maxItems": 25,
+      "catalogueMax": 100,
       "map": {
         "title": "server.title|server.name",
         "url": "server.websiteUrl|server.repository.url|server.remotes.0.url",
@@ -561,9 +566,10 @@
       "kind": "json-api",
       "category": "repo",
       "enabled": true,
-      "url": "https://registry.smithery.ai/servers?pageSize=50",
+      "url": "https://registry.smithery.ai/servers?pageSize=100",
       "itemPath": "servers",
       "maxItems": 20,
+      "catalogueMax": 100,
       "map": {
         "title": "displayName|qualifiedName",
         "url": "qualifiedName",
@@ -582,9 +588,10 @@
       "kind": "json-api",
       "category": "repo",
       "enabled": true,
-      "url": "https://registry.npmjs.org/-/v1/search?text=keywords:mcp&size=50&popularity=1.0",
+      "url": "https://registry.npmjs.org/-/v1/search?text=keywords:mcp&size=250&popularity=1.0",
       "itemPath": "objects",
       "maxItems": 20,
+      "catalogueMax": 250,
       "map": {
         "title": "package.name",
         "url": "package.links.npm|package.links.repository",

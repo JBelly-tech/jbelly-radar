@@ -85,6 +85,26 @@ function Invoke-Http {
     return ($enc.GetString($bytes)).TrimStart([char]0xFEFF)
 }
 
+# How many items to FETCH, which is not how many are shown.
+#
+# `maxItems` is a DISPLAY cap: how many of a source's items reach
+# data/trends.json, which the dashboard ranks by heat. `catalogueMax` is a FETCH
+# cap, and only a catalogue source sets one.
+#
+# The two are different because the two questions are different. "What is hot"
+# wants a ranked top and is ruined by a thousand rows. "Does anything cover X"
+# wants everything, and a ranked top answers it wrong: it says not in today's
+# top N in a voice that sounds like does not exist. The ledger keeps every item
+# fetched, so reading deep costs the dashboard nothing and buys the catalogue
+# everything.
+function Get-FetchMax {
+    param($Source, $Defaults, [int]$Fallback = 25)
+    $display = [int](Get-Prop $Source 'maxItems' (Get-Prop $Defaults 'maxItems' $Fallback))
+    $deep = [int](Get-Prop $Source 'catalogueMax' 0)
+    if ($deep -gt $display) { return $deep }
+    return $display
+}
+
 function Get-PublishedMeaning {
     # What a source's date means. Declared per source with `publishedMeaning`, or
     # derived from the kind, which is honest because each fetcher reads one field:
@@ -169,7 +189,10 @@ function Get-SkillsShItems {
     $html = Invoke-Http -Url (Get-Prop $Source 'url' 'https://www.skills.sh/') -TimeoutSec (Get-Prop $Defaults 'timeoutSec' 30) -UserAgent $ua
     $pattern = '\\"source\\":\\"([^"\\]+)\\",\\"skillId\\":\\"([^"\\]+)\\",\\"name\\":\\"([^"\\]+)\\",\\"installs\\":(\d+),\\"weeklyInstalls\\":\[([0-9,\s]*)\]'
     $newestFirst = ((Get-Prop $Source 'weeklyOrder' 'newest-first') -eq 'newest-first')
-    $max = [int](Get-Prop $Source 'maxItems' 120)
+    # The payload already on the wire carries ~600 matches (~536 distinct skills).
+    # Reading 120 of them threw away 78% of bytes that had already been downloaded,
+    # so depth here costs not one extra request.
+    $max = Get-FetchMax -Source $Source -Defaults $Defaults -Fallback 120
     $items = New-Object System.Collections.Generic.List[object]
     foreach ($m in [regex]::Matches($html, $pattern)) {
         $repo     = $m.Groups[1].Value
@@ -207,9 +230,9 @@ function Get-GitHubItems {
     if ($createdDays) { $q = $q + ' created:>' + ([datetime]::UtcNow.AddDays(-[int]$createdDays)).ToString('yyyy-MM-dd') }
     if ($pushedDays)  { $q = $q + ' pushed:>'  + ([datetime]::UtcNow.AddDays(-[int]$pushedDays)).ToString('yyyy-MM-dd') }
 
-    $max = [int](Get-Prop $Source 'maxItems' (Get-Prop $Defaults 'maxItems' 25))
+    $max = Get-FetchMax -Source $Source -Defaults $Defaults
     $url = 'https://api.github.com/search/repositories?q=' + [uri]::EscapeDataString($q.Trim()) +
-           '&sort=' + (Get-Prop $Source 'sort' 'stars') + '&order=desc&per_page=' + [math]::Min($max, 50)
+           '&sort=' + (Get-Prop $Source 'sort' 'stars') + '&order=desc&per_page=' + [math]::Min($max, 100)
 
     $headers = @{ 'Accept' = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
     $token = $null
@@ -352,7 +375,7 @@ function Get-JsonPath {
 
 function Get-JsonApiItems {
     param($Source, $Defaults)
-    $max = [int](Get-Prop $Source 'maxItems' (Get-Prop $Defaults 'maxItems' 25))
+    $max = Get-FetchMax -Source $Source -Defaults $Defaults
     $ua  = Get-Prop $Source 'userAgent' (Get-Prop $Defaults 'userAgent' 'jbelly-radar/1.0')
     $raw = Invoke-Http -Url $Source.url -TimeoutSec (Get-Prop $Defaults 'timeoutSec' 30) -UserAgent $ua -Headers @{ 'Accept' = 'application/json' }
     $data = $raw | ConvertFrom-Json
@@ -926,7 +949,36 @@ function Invoke-RadarSync {
     Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data\ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
     Set-RadarHeat -Items $items -HeatConfig $config.heat
 
-    $sorted = @($items | Sort-Object -Property @{ Expression = { $_.heat }; Descending = $true }, @{ Expression = { $_.ageDays }; Descending = $false })
+    # Every item fetched now has a ledger row, tech tags, a publisher and a heat
+    # score. What reaches data/trends.json is the per-source DISPLAY cap
+    # (`maxItems`), applied in fetch order -- which is what the dashboard held
+    # before a source could be read deeper than it is shown. Reading deeper must
+    # change what the record remembers, never what the page ranks: a thousand
+    # skills in the feed would bury the nineteen things that actually moved.
+    $displayCap = @{}
+    foreach ($src in $config.sources) {
+        $displayCap[$src.id] = [int](Get-Prop $src 'maxItems' (Get-Prop $config.defaults 'maxItems' 25))
+    }
+    $shownCount = @{}
+    $display = New-Object System.Collections.Generic.List[object]
+    foreach ($it in $items) {
+        $cap = [int](Get-Prop $config.defaults 'maxItems' 25)
+        if ($displayCap.ContainsKey($it.sourceId)) { $cap = $displayCap[$it.sourceId] }
+        $n = 0
+        if ($shownCount.ContainsKey($it.sourceId)) { $n = $shownCount[$it.sourceId] }
+        if ($n -ge $cap) { continue }
+        $shownCount[$it.sourceId] = $n + 1
+        $display.Add($it)
+    }
+    # the health row already reports fetched and kept; `shown` is the third number,
+    # and without it the ops console would report a depth the dashboard never shows
+    foreach ($h in $health) {
+        $n = 0
+        if ($shownCount.ContainsKey($h.id)) { $n = $shownCount[$h.id] }
+        $h | Add-Member -NotePropertyName 'shown' -NotePropertyValue $n -Force
+    }
+
+    $sorted = @($display | Sort-Object -Property @{ Expression = { $_.heat }; Descending = $true }, @{ Expression = { $_.ageDays }; Descending = $false })
 
     # publishers seen this run, so the client can render names and tiers without the whole list
     $seenPublishers = [ordered]@{}

@@ -121,9 +121,9 @@ function Get-HarnessOutput {
                   '--disable-extensions', '--remote-debugging-port=0',
                   "--user-data-dir=$ProfileDir", $Url)
     $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru -WindowStyle Hidden
+    $wsUrl = $null
     try {
         $deadline = (Get-Date).AddSeconds($TimeoutSec)
-        $wsUrl = $null
         while ((Get-Date) -lt $deadline -and -not $wsUrl) {
             Start-Sleep -Milliseconds 200
             if (-not (Test-Path $portFile)) { continue }
@@ -149,7 +149,20 @@ function Get-HarnessOutput {
         return $text
     }
     finally {
-        if ($p -and -not $p.HasExited) { $p.Kill(); [void]$p.WaitForExit(5000) }
+        # Chromium's browser, renderer, GPU and utility processes all outlive a
+        # Kill() on what we started -- Edge's launcher hands off and exits, so by
+        # the time we kill it the tree is no longer ours to kill. Measured: five
+        # harnesses left 78 processes behind, and the run after that failed with
+        # nothing to report but silence.
+        #
+        # So sweep by --user-data-dir instead. Every run gets its own directory,
+        # which makes the match exact: it can never touch the browser the person
+        # running the tests has open.
+        if ($p -and -not $p.HasExited) { try { $p.Kill() } catch { } }
+        $exeName = Split-Path -Leaf $BrowserExe
+        Get-CimInstance Win32_Process -Filter "Name='$exeName'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDir) } |
+            ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     }
 }
 
