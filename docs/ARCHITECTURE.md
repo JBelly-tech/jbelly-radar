@@ -62,11 +62,47 @@ Everything else is unchanged from v1, so the v1 page keeps rendering v2 data.
 `/api/status` returns it with `dataAt` (mtime of `trends.json`), `everyMinutes`
 and `serverTime` added. `POST /api/sync` returns `202 {started: bool, status}`.
 
+`data/ledger.json` — the **catalogue**, and the only generated file that is
+committed, because it is the only one a re-run cannot rebuild. A flat map of
+item id → row, appended to by `Set-RadarMomentum` and read by
+`scripts/match-plan.ps1`. `data/trends.json` holds one sync with every source
+capped; the ledger holds everything ever seen, uncapped, which is what makes
+"does anything cover this requirement" answerable at all.
+
+```jsonc
+{
+  "67b29c83…": {
+    "title": "…", "url": "https://…", "summary": "…",        // identity, since 2026-09-23
+    "sourceId": "skills-sh", "category": "skill",
+    "tech": ["agent-skills"], "install": "npx skills add owner/repo",
+    "author": "owner/repo", "metricLabel": "installs",
+    "publisherName": "Vercel", "publisherTier": 2,            // flattened, both optional
+    "firstSeen": "2026-09-17T…", "firstSeenBasis": "observed|snapshot-floor",
+    "lastSeen":  "2026-09-23T…",
+    "metric": 3538392, "at": "2026-09-23T…", "momentum": 3.3  // the momentum baseline
+  }
+}
+```
+
+Only `firstSeen`, `firstSeenBasis` and `lastSeen` are guaranteed present. A row
+with no `title` predates the identity fields and is an **anonymous** row: proof
+the radar saw something, with no way to say what. Consumers must count and
+report those rather than drop them, because a "no coverage" answer from a partly
+anonymous catalogue is a weaker claim than it looks.
+
+Two caps, deliberately separate (`Get-FetchMax`, `lib/sources.ps1`):
+`maxItems` is the **display** cap — how many of a source's items reach
+`trends.json` for the dashboard to rank. `catalogueMax` is the **fetch** cap —
+how many reach the ledger. One number doing both jobs threw the answer away
+before anything could ask the question.
+
 ## Server (`radar.ps1`)
 
 - Serves the project folder on `http://localhost:8477/`, static files only, path-confined.
 - Sync runs in a **child PowerShell process** (`scripts/sync.ps1 -Quiet`), so the
-  listener keeps answering during the ~90 s a sync takes. One sync at a time,
+  listener keeps answering while a sync runs. Sources are fetched
+  `defaults.parallelFetches` at a time (8), so the wall clock is roughly the
+  slowest single source; recent full syncs took 24-38 s. One sync at a time,
   across processes: `data/sync.lock` holds the pid of the running sync.
 - Sync fires: at start when the cache is older than `-StaleMinutes`; every
   `-Every` minutes (default 20) while running; on `POST /api/sync`.

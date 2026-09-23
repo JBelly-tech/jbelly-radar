@@ -9,10 +9,10 @@ labels: source
 Name and URL (the feed or API endpoint, if you know it).
 
 **Category**
-skill · repo · discussion · news · research — and why that one.
+skill · repo · release · news · discussion · research — and why that one.
 
 **Why it earns a slot**
-What it shows that the 19 current sources do not.
+What it shows that the 54 sources already enabled do not.
 
 **Access**
 - [ ] Public, no key
