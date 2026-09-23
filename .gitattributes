@@ -1,3 +1,11 @@
 * text=auto eol=lf
-*.ps1 text eol=crlf
+
+# LF, not CRLF. PowerShell reads either, so this is not about the parser: a
+# CRLF script cannot carry a working `#!/usr/bin/env pwsh` line, because the
+# kernel passes the carriage return along as part of the interpreter name and
+# the failure reads as "pwsh\r: No such file or directory". Keeping every file
+# LF also stops a Linux or macOS contributor's first commit from being a
+# whole-file line-ending diff.
+*.ps1 text eol=lf
+
 *.png binary
