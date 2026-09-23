@@ -67,20 +67,99 @@ if (-not (Test-Path $dataFile)) {
     Write-Output 'seeded data\trends.json from tests\fixtures\trends.min.json'
 }
 
+# ── reading the result out of the page ────────────────────────────────────────
+# Chromium's --dump-dom stopped producing anything in Edge 153: exit 0, empty
+# stdout, no stderr, in every headless mode and with a clean profile, while
+# --screenshot still renders, so headless itself is fine. A test runner cannot
+# pin a browser version on someone else's machine, so it stopped depending on
+# that flag and asks the page over the DevTools protocol instead.
+#
+# This is the better tool anyway. It reads the exact text the harness prints --
+# no HTML to un-escape -- and it polls until the harness writes DONE instead of
+# guessing a fixed wait, so a slow harness is not a failure and a fast one is
+# not billed for time it never needed.
+
+function Invoke-CdpEvaluate {
+    param([string]$WsUrl, [string]$Expression, [int]$TimeoutMs = 5000)
+    $ws = New-Object System.Net.WebSockets.ClientWebSocket
+    try {
+        if (-not $ws.ConnectAsync([uri]$WsUrl, [Threading.CancellationToken]::None).Wait($TimeoutMs)) { return $null }
+        $req = (@{ id = 1; method = 'Runtime.evaluate'
+                   params = @{ expression = $Expression; returnByValue = $true } } |
+                ConvertTo-Json -Depth 5 -Compress)
+        $outSeg = New-Object 'System.ArraySegment[byte]' -ArgumentList (, [Text.Encoding]::UTF8.GetBytes($req))
+        if (-not $ws.SendAsync($outSeg, 'Text', $true, [Threading.CancellationToken]::None).Wait($TimeoutMs)) { return $null }
+
+        # a reply can arrive across several frames; read until the message ends
+        $sb = New-Object System.Text.StringBuilder
+        $buf = New-Object byte[] 65536
+        do {
+            $inSeg = New-Object 'System.ArraySegment[byte]' -ArgumentList (, $buf)
+            $t = $ws.ReceiveAsync($inSeg, [Threading.CancellationToken]::None)
+            if (-not $t.Wait($TimeoutMs)) { return $null }
+            [void]$sb.Append([Text.Encoding]::UTF8.GetString($buf, 0, $t.Result.Count))
+        } while (-not $t.Result.EndOfMessage)
+
+        $reply = $sb.ToString() | ConvertFrom-Json
+        if ($reply.result -and $reply.result.result) { return [string]$reply.result.result.value }
+        return $null
+    }
+    catch { return $null }
+    finally { $ws.Dispose() }
+}
+
+function Get-HarnessOutput {
+    param([string]$BrowserExe, [string]$Url, [string]$ProfileDir, [int]$TimeoutSec = 40)
+    # a fresh profile every run: a locked or half-written one fails as silence
+    if (Test-Path $ProfileDir) { Remove-Item -LiteralPath $ProfileDir -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
+    $portFile = Join-Path $ProfileDir 'DevToolsActivePort'
+
+    # port 0 lets Chromium pick a free one and write it to DevToolsActivePort, so
+    # two runs on one machine cannot collide the way a fixed port would
+    $procArgs = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
+                  '--disable-extensions', '--remote-debugging-port=0',
+                  "--user-data-dir=$ProfileDir", $Url)
+    $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru -WindowStyle Hidden
+    try {
+        $deadline = (Get-Date).AddSeconds($TimeoutSec)
+        $wsUrl = $null
+        while ((Get-Date) -lt $deadline -and -not $wsUrl) {
+            Start-Sleep -Milliseconds 200
+            if (-not (Test-Path $portFile)) { continue }
+            try {
+                $devPort = @(Get-Content -LiteralPath $portFile -ErrorAction Stop)[0]
+                if (-not $devPort) { continue }
+                $list = Invoke-RestMethod -Uri "http://127.0.0.1:$devPort/json/list" -TimeoutSec 3
+                $target = @($list | Where-Object { $_.type -eq 'page' -and $_.url -like 'http*' }) | Select-Object -First 1
+                if ($target) { $wsUrl = $target.webSocketDebuggerUrl }
+            } catch { }
+        }
+        if (-not $wsUrl) { return '' }
+
+        # ask the page for its own output until it says DONE, rather than guess a wait
+        $expr = "(document.getElementById('out')||{}).textContent||''"
+        $text = ''
+        while ((Get-Date) -lt $deadline) {
+            $got = Invoke-CdpEvaluate -WsUrl $wsUrl -Expression $expr
+            if ($null -ne $got) { $text = $got }
+            if ($text -match '(?m)^\s*DONE') { break }
+            Start-Sleep -Milliseconds 250
+        }
+        return $text
+    }
+    finally {
+        if ($p -and -not $p.HasExited) { $p.Kill(); [void]$p.WaitForExit(5000) }
+    }
+}
+
 $failed = 0
 try {
 foreach ($f in $files) {
-    $profile = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName)
-    $dom = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName + '.html')
+    $profileDir = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName)
     $url = "http://localhost:$Port/tests/harness/$($f.Name)"
-    $args = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run', '--disable-extensions',
-              "--user-data-dir=$profile", '--virtual-time-budget=8000', '--dump-dom', $url)
-    $p = Start-Process -FilePath $browserExe -ArgumentList $args -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $dom
-    $html = ''
-    if (Test-Path $dom) { $html = [System.IO.File]::ReadAllText($dom, [System.Text.Encoding]::UTF8) }
-    $m = [regex]::Match($html, '<pre id="out"[^>]*>(.*?)</pre>', 'Singleline')
-    $lines = @()
-    if ($m.Success) { $lines = @(([System.Net.WebUtility]::HtmlDecode($m.Groups[1].Value)) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+    $text = Get-HarnessOutput -BrowserExe $browserExe -Url $url -ProfileDir $profileDir
+    $lines = @($text -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
     $done = $lines | Where-Object { $_ -like 'DONE*' } | Select-Object -Last 1
     $fails = @($lines | Where-Object { $_ -like 'FAIL*' })

@@ -4,6 +4,44 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+The ledger becomes a catalogue: it remembers what an item was, not only that it
+was.
+
+### Added
+
+- **Identity on every ledger row** — `title`, `url`, `summary`, `sourceId`,
+  `category`, `tech`, `install`, `author` and a flattened `publisherName` /
+  `publisherTier`. `data/trends.json` holds one sync and every source is capped,
+  so "is there a skill for X" asked against it answers *not in today's top N*
+  while sounding like *does not exist* — the worst available failure for a
+  question used to choose a technology. The ledger keeps every row it has ever
+  written, so the same question asked there is answered from everything the
+  radar has ever seen: **1,555 named rows against 750 in the current sync.**
+- **`backfill-ledger.ps1` restores identity too**, from the dated snapshots,
+  which are full `trends.json` dumps and still hold it: **805 rows named**, 160
+  first-seen dates lowered. 308 rows stay anonymous and are reported as such —
+  they were seen between daily snapshots, so no snapshot ever recorded them.
+  Identity is only ever filled in, never overwritten: a live sync is fresher
+  than any snapshot. Re-running changes nothing (verified).
+
+### Fixed
+
+- **The browser harness ran on a flag Edge no longer honours.** `--dump-dom`
+  produces empty output in Edge 153 — exit 0, no stderr, every headless mode, a
+  clean profile — while `--screenshot` still renders. The runner now reads the
+  page over the DevTools protocol, which returns the harness's own text with no
+  HTML to un-escape, and polls until it prints `DONE` instead of waiting a fixed
+  8 s. All 333 assertions pass again.
+
+### Known limits
+
+- The catalogue only grows from what rotates. Measured over the same window:
+  MCP-tagged rows went 58 → 91, but skills went 155 → **158**, because
+  `skills-sh` is capped at 120 and returns the same top 120 every sync. Paging
+  the catalogue sources is what fixes skill coverage; the ledger alone does not.
+
 ## [0.3.0] — 2026-09-22
 
 The radar starts keeping a record, and stops reporting numbers it cannot support.

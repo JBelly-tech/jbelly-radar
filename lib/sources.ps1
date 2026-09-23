@@ -494,10 +494,23 @@ function Set-RadarHeat {
 # Momentum comes from OUR OWN snapshots first -- an unambiguous delta between two
 # syncs -- and falls back to a source-supplied weekly series on the first run.
 # The ledger. One entry per item id, carried across every sync, holding:
+#   title/url/summary       what the item IS, so a row outlives the item's stay
+#   sourceId/category/tech  where it came from and what it is about
+#   install/author          how to get it and who ships it (skills carry both)
+#   publisherName/Tier      flattened from the publisher object: a matcher ranks by
+#                           tier and prints the name, and reads nothing else
 #   firstSeen  the first sync that ever recorded this id. NEVER overwritten.
 #   lastSeen   the most recent sync that saw it, so a disappearance is visible.
 #   metric/at  the momentum baseline and when it was taken (metric-bearing items only)
 #   momentum   the last measured value, so it survives a sync too young to re-measure
+#
+# The identity fields are what make this a catalogue rather than a momentum cache.
+# data/trends.json holds one sync and every source is capped, so "is there a skill
+# for X" asked against it answers "not in today's top N" while sounding like "does
+# not exist" -- the worst available failure for a question someone uses to choose a
+# technology. The ledger keeps every row it has ever written, so the same question
+# asked here is answered from everything the radar has ever seen. Identity is
+# refreshed on every sighting, because a title or a summary can be edited upstream.
 #
 # firstSeen is the only field here that cannot be reconstructed later: a source's own
 # "published" date means different things per source (posted, uploaded, last released),
@@ -599,7 +612,23 @@ function Set-RadarMomentum {
         if (-not $firstSeen) { $firstSeen = $nowIso; $firstSeenBasis = 'observed' }
         if (-not $firstSeenBasis) { $firstSeenBasis = 'snapshot-floor' }
 
-        $entry = [ordered]@{ firstSeen = $firstSeen; firstSeenBasis = $firstSeenBasis; lastSeen = $nowIso }
+        # identity first, so `head` on the file shows what a row is before when it was
+        $entry = [ordered]@{ title = $it.title; url = $it.url }
+        if ($it.summary) { $entry['summary'] = $it.summary }
+        $entry['sourceId'] = $it.sourceId
+        $entry['category'] = $it.category
+        if ($it.tech -and @($it.tech).Count -gt 0) { $entry['tech'] = @($it.tech) }
+        if ($it.install) { $entry['install'] = $it.install }
+        if ($it.author) { $entry['author'] = $it.author }
+        if ($it.publisher) {
+            $pubName = Get-Prop $it.publisher 'name' $null
+            $pubTier = Get-Prop $it.publisher 'tier' $null
+            if ($pubName) { $entry['publisherName'] = $pubName }
+            if ($pubTier) { $entry['publisherTier'] = $pubTier }
+        }
+        $entry['firstSeen'] = $firstSeen
+        $entry['firstSeenBasis'] = $firstSeenBasis
+        $entry['lastSeen'] = $nowIso
         if ($null -ne $baseMetric) { $entry['metric'] = $baseMetric; $entry['at'] = $baseAt }
         if ($null -ne $baseMomentum) { $entry['momentum'] = $baseMomentum }
         $next[$it.id] = [pscustomobject]$entry
@@ -633,10 +662,15 @@ function Set-RadarMomentum {
         if (-not $rowSeen -or -not $rowBasis) {
             # Anything we cannot prove we watched arrive is a floor, not a birth date.
             if (-not $rowSeen) { $rowSeen = (Get-Prop $row 'at' $nowIso) }
-            $carried = [ordered]@{
-                firstSeen = $rowSeen; firstSeenBasis = 'snapshot-floor'
-                lastSeen = (Get-Prop $row 'lastSeen' (Get-Prop $row 'at' $nowIso))
+            $carried = [ordered]@{}
+            foreach ($f in @('title', 'url', 'summary', 'sourceId', 'category', 'tech',
+                             'install', 'author', 'publisherName', 'publisherTier')) {
+                $v = Get-Prop $row $f $null
+                if ($null -ne $v) { $carried[$f] = $v }
             }
+            $carried['firstSeen'] = $rowSeen
+            $carried['firstSeenBasis'] = 'snapshot-floor'
+            $carried['lastSeen'] = (Get-Prop $row 'lastSeen' (Get-Prop $row 'at' $nowIso))
             foreach ($f in @('metric', 'at', 'momentum')) {
                 $v = Get-Prop $row $f $null
                 if ($null -ne $v) { $carried[$f] = $v }
@@ -649,7 +683,10 @@ function Set-RadarMomentum {
     $dir = Split-Path -Parent $HistoryPath
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $tmp = $HistoryPath + '.tmp'
-    [System.IO.File]::WriteAllText($tmp, ($next | ConvertTo-Json -Depth 4 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+    # depth 6: root -> row -> tech array -> string, with headroom. PowerShell's depth
+    # counting silently truncates to "System.Object[]" rather than failing, so this is
+    # set above what the shape needs on purpose.
+    [System.IO.File]::WriteAllText($tmp, ($next | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
     Move-FileWithRetry -From $tmp -To $HistoryPath
 }
 

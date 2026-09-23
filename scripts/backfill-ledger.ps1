@@ -1,4 +1,5 @@
-# scripts/backfill-ledger.ps1 — rebuild firstSeen in the ledger from daily snapshots.
+# scripts/backfill-ledger.ps1 — rebuild firstSeen and identity in the ledger from
+# the daily snapshots.
 #
 # The ledger (data/ledger.json) records, per item id, the first sync that
 # ever saw it. That field is written going forward by Set-RadarMomentum, but the
@@ -6,11 +7,21 @@
 # existed, and those snapshots prove an earlier sighting. This replays them oldest
 # first and lowers firstSeen wherever a snapshot proves the item was already there.
 #
+# It also restores IDENTITY — title, url, summary, tech, install, publisher. The
+# ledger only started carrying those on 2026-09-23, so every row written before
+# that is an anonymous date: proof that something existed, with no way to say what.
+# The snapshots are full trends.json dumps and still hold all of it, so a row that
+# rotated off the radar before the change can be named from the last snapshot that
+# saw it. Without this the catalogue starts at the day it was invented rather than
+# at the day the record does.
+#
 #   powershell -File scripts\backfill-ledger.ps1            # apply
 #   powershell -File scripts\backfill-ledger.ps1 -DryRun    # report, change nothing
 #
 # Deterministic, no model call, no network. Safe to re-run: firstSeen is only ever
-# moved EARLIER, never later, so replaying the same snapshots twice is a no-op.
+# moved EARLIER, never later, and identity is only ever FILLED IN, never overwritten
+# — a live sync is fresher than any snapshot, so it always wins. Replaying the same
+# snapshots twice is a no-op.
 # It is also the recovery path — a lost ledger can be rebuilt from the snapshots.
 
 [CmdletBinding()]
@@ -31,6 +42,27 @@ function Read-Json([string]$Path) {
 }
 
 if (-not (Test-Path $HistoryDir)) { Write-Output "no history directory at $HistoryDir"; exit 0 }
+
+# The identity a ledger row carries, in the order Set-RadarMomentum writes them, so
+# a backfilled row and a freshly written one are indistinguishable in the file.
+$identityFields = @('title', 'url', 'summary', 'sourceId', 'category', 'tech', 'install', 'author')
+$identityAll = $identityFields + @('publisherName', 'publisherTier')
+
+function Get-SnapshotIdentity($Item) {
+    $out = [ordered]@{}
+    foreach ($f in $identityFields) {
+        $p = $Item.PSObject.Properties[$f]
+        if ($p -and $null -ne $p.Value -and '' -ne "$($p.Value)") { $out[$f] = $p.Value }
+    }
+    # the snapshot nests the publisher; the ledger flattens the two fields a matcher reads
+    if ($Item.PSObject.Properties['publisher'] -and $Item.publisher) {
+        $pn = $Item.publisher.PSObject.Properties['name']
+        $pt = $Item.publisher.PSObject.Properties['tier']
+        if ($pn -and $pn.Value) { $out['publisherName'] = $pn.Value }
+        if ($pt -and $pt.Value) { $out['publisherTier'] = $pt.Value }
+    }
+    return $out
+}
 
 # ── the snapshots, oldest first ───────────────────────────────────────────────
 # Order by the generatedAt inside the file, not by the filename or the file's
@@ -65,11 +97,15 @@ if (-not $Quiet) {
 $earliest = @{}
 $latest = @{}
 $basis = @{}
+$identity = @{}
 $oldestIso = $ordered[0].at.ToString('o')
 foreach ($snap in $ordered) {
     $iso = $snap.at.ToString('o')
     foreach ($it in $snap.items) {
         if (-not $it.id) { continue }
+        # newest snapshot wins: we replay oldest first, so the last write is the most
+        # recent description the radar ever held of this item
+        $identity[$it.id] = (Get-SnapshotIdentity $it)
         if (-not $earliest.ContainsKey($it.id)) {
             $earliest[$it.id] = $iso
             # An item already present in the OLDEST snapshot was not born there - that
@@ -94,17 +130,21 @@ if (Test-Path $ledgerPath) {
     } catch { Write-Output 'ledger unreadable; rebuilding it from the snapshots alone' }
 }
 
-$lowered = 0; $added = 0; $unchanged = 0
+$lowered = 0; $added = 0; $unchanged = 0; $named = 0
 foreach ($id in $earliest.Keys) {
     $proven = $earliest[$id]
     $provenAt = [datetime]::Parse($proven)
+    $ident = $identity[$id]
 
     if (-not $ledger.Contains($id)) {
         # an item that has since dropped off the radar, but we saw it: it belongs in
         # the record, or the record is not a record
-        $ledger[$id] = [pscustomobject]([ordered]@{
-            firstSeen = $proven; firstSeenBasis = $basis[$id]; lastSeen = $latest[$id]
-        })
+        $fresh = [ordered]@{}
+        foreach ($k in $ident.Keys) { $fresh[$k] = $ident[$k] }
+        $fresh['firstSeen'] = $proven
+        $fresh['firstSeenBasis'] = $basis[$id]
+        $fresh['lastSeen'] = $latest[$id]
+        $ledger[$id] = [pscustomobject]$fresh
         $added++
         continue
     }
@@ -123,29 +163,54 @@ foreach ($id in $earliest.Keys) {
         try { if ([datetime]::Parse($current) -gt $provenAt) { $needs = $true } } catch { $needs = $true }
     }
 
-    if (-not $needs) { $unchanged++; continue }
+    # fill only. A row that already has a title was named by a sync, and a sync is
+    # never older than the snapshots, so overwriting it would trade fresh for stale.
+    $needsName = ($row.PSObject.Properties.Name -notcontains 'title') -and ($ident.Count -gt 0)
 
-    # rebuild the row with firstSeen and its basis first, keeping every other field
-    $fresh = [ordered]@{ firstSeen = $proven; firstSeenBasis = $basis[$id] }
+    if (-not $needs -and -not $needsName) { $unchanged++; continue }
+
+    # rebuild in the order Set-RadarMomentum uses: identity, then dates, then baseline
+    $fresh = [ordered]@{}
+    if ($needsName) {
+        foreach ($k in $ident.Keys) { $fresh[$k] = $ident[$k] }
+        $named++
+    }
+    else {
+        foreach ($f in $identityAll) {
+            if ($row.PSObject.Properties.Name -contains $f) { $fresh[$f] = $row.$f }
+        }
+    }
+    if ($needs) {
+        $fresh['firstSeen'] = $proven; $fresh['firstSeenBasis'] = $basis[$id]; $lowered++
+    }
+    else {
+        $fresh['firstSeen'] = $current; $fresh['firstSeenBasis'] = $currentBasis
+    }
     foreach ($p in $row.PSObject.Properties) {
-        if ($p.Name -eq 'firstSeen' -or $p.Name -eq 'firstSeenBasis') { continue }
+        if ($fresh.Contains($p.Name)) { continue }
         $fresh[$p.Name] = $p.Value
     }
     if (-not $fresh.Contains('lastSeen')) { $fresh['lastSeen'] = $latest[$id] }
     $ledger[$id] = [pscustomobject]$fresh
-    $lowered++
+}
+
+$anonymous = 0
+foreach ($k in $ledger.Keys) {
+    if ($ledger[$k].PSObject.Properties.Name -notcontains 'title') { $anonymous++ }
 }
 
 Write-Output ''
 Write-Output ("ids proven earlier by a snapshot : {0}" -f $lowered)
 Write-Output ("ids restored to the ledger       : {0}" -f $added)
+Write-Output ("ids given back their identity    : {0}" -f $named)
 Write-Output ("ids already correct              : {0}" -f $unchanged)
 Write-Output ("ledger rows                      : {0}" -f $ledger.Count)
+Write-Output ("  still anonymous (no snapshot)  : {0}" -f $anonymous)
 
 if ($DryRun) { Write-Output ''; Write-Output '-DryRun: nothing written'; exit 0 }
 
 $tmp = $ledgerPath + '.tmp'
-[System.IO.File]::WriteAllText($tmp, ($ledger | ConvertTo-Json -Depth 4 -Compress), (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($tmp, ($ledger | ConvertTo-Json -Depth 6 -Compress), (New-Object System.Text.UTF8Encoding($false)))
 Move-Item -LiteralPath $tmp -Destination $ledgerPath -Force
 Write-Output ''
 Write-Output ("written: {0}" -f $ledgerPath)
