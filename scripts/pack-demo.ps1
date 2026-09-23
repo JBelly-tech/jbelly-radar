@@ -35,7 +35,7 @@ $trends = Get-Content -Raw -Encoding UTF8 (Join-Path $dataDir 'trends.json') | C
 $stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd')
 $okSources = @($trends.sources | Where-Object { $_.status -eq 'ok' }).Count
 
-if (-not $OutFile) { $OutFile = Join-Path $root ("dist\jbelly-radar-demo-$stamp.zip") }
+if (-not $OutFile) { $OutFile = Join-Path $root ("dist/jbelly-radar-demo-$stamp.zip") }
 $outDir = Split-Path -Parent $OutFile
 if ($outDir -and -not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 
@@ -47,12 +47,12 @@ try {
     Copy-Item -Path (Join-Path $root 'app') -Destination (Join-Path $stage 'app') -Recurse -Force
     # the operator console reads /api/*, which does not exist on file:// - leave it out
     # rather than ship a page that can only show its own error state
-    $ops = Join-Path $stage 'app\ops'
+    $ops = Join-Path $stage 'app/ops'
     if (Test-Path $ops) { Remove-Item -LiteralPath $ops -Recurse -Force }
 
     New-Item -ItemType Directory -Path (Join-Path $stage 'data') -Force | Out-Null
-    Copy-Item (Join-Path $dataDir 'trends.js') (Join-Path $stage 'data\trends.js') -Force
-    Copy-Item (Join-Path $dataDir 'taxonomy.js') (Join-Path $stage 'data\taxonomy.js') -Force
+    Copy-Item (Join-Path $dataDir 'trends.js') (Join-Path $stage 'data/trends.js') -Force
+    Copy-Item (Join-Path $dataDir 'taxonomy.js') (Join-Path $stage 'data/taxonomy.js') -Force
 
     Copy-Item (Join-Path $root 'LICENSE') (Join-Path $stage 'LICENSE') -Force
     Copy-Item (Join-Path $root 'LICENSE-DATA') (Join-Path $stage 'LICENSE-DATA') -Force

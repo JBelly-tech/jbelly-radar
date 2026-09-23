@@ -27,7 +27,7 @@ foreach ($f in Get-ChildItem -Path $root -Recurse -Filter *.ps1 -File) {
 
 # ── 2. the source configuration is well formed ────────────────────────────────
 
-$configPath = Join-Path $root 'config\sources.json'
+$configPath = Join-Path $root 'config/sources.json'
 $checks++
 if (-not (Test-Path $configPath)) { $fail.Add('missing config/sources.json') }
 else {
@@ -79,7 +79,7 @@ else {
 
 # ── 2b. taxonomy and publishers are well formed ───────────────────────────────
 
-$taxPath = Join-Path $root 'config\taxonomy.json'
+$taxPath = Join-Path $root 'config/taxonomy.json'
 $checks++
 if (-not (Test-Path $taxPath)) { $fail.Add('missing config/taxonomy.json') }
 else {
@@ -115,7 +115,7 @@ else {
     }
 }
 
-$pubPath = Join-Path $root 'config\publishers.json'
+$pubPath = Join-Path $root 'config/publishers.json'
 $checks++
 if (-not (Test-Path $pubPath)) { $fail.Add('missing config/publishers.json') }
 else {
@@ -165,7 +165,7 @@ foreach ($f in Get-ChildItem -Path (Join-Path $root 'app') -Recurse -File) {
 
 # ── 4. the page's structural guarantees ───────────────────────────────────────
 
-$indexPath = Join-Path $root 'app\index.html'
+$indexPath = Join-Path $root 'app/index.html'
 $checks++
 if (-not (Test-Path $indexPath)) { $fail.Add('missing app/index.html') }
 else {

@@ -33,7 +33,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-if (-not $HistoryDir) { $HistoryDir = Join-Path $root 'data\history' }
+if (-not $HistoryDir) { $HistoryDir = Join-Path $root 'data/history' }
 $ledgerPath = Join-Path (Split-Path -Parent $HistoryDir) 'ledger.json'
 
 function Read-Json([string]$Path) {

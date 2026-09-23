@@ -50,15 +50,15 @@ function Format-Line {
     return $out
 }
 
-if (-not $Plan) { $Plan = Join-Path $root 'config\build.example.json' }
+if (-not $Plan) { $Plan = Join-Path $root 'config/build.example.json' }
 if (-not (Test-Path $Plan)) { Write-Output "no plan at $Plan"; exit 1 }
 
 # NOTE: not $plan -- PowerShell variable names are case-insensitive, so $plan and
 # the [string]$Plan parameter are one variable, and the assignment would coerce
 # the parsed document back to a string.
 $planDoc = Read-Json $Plan
-$template = Read-Json (Join-Path $root 'config\match-template.json')
-$ledgerPath = Join-Path $root 'data\ledger.json'
+$template = Read-Json (Join-Path $root 'config/match-template.json')
+$ledgerPath = Join-Path $root 'data/ledger.json'
 if (-not (Test-Path $ledgerPath)) { Write-Output 'no data\ledger.json - run a sync first'; exit 1 }
 $ledgerRaw = Read-Json $ledgerPath
 
@@ -193,7 +193,7 @@ function Get-Matches {
 
 $stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd')
 $planName = [System.IO.Path]::GetFileNameWithoutExtension($Plan)
-if (-not $OutDir) { $OutDir = Join-Path $root ('content\matches\' + $stamp) }
+if (-not $OutDir) { $OutDir = Join-Path $root ('content/matches/' + $stamp) }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 

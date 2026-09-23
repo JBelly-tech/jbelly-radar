@@ -10,7 +10,7 @@ param([switch]$Quiet)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-. (Join-Path $root 'lib\sources.ps1')
+. (Join-Path $root 'lib/sources.ps1')
 
 if (-not $Quiet) { Write-Host "JBelly Radar - syncing sources" -ForegroundColor Cyan }
 

@@ -760,7 +760,7 @@ function Move-FileWithRetry {
 function Invoke-RadarSync {
     param([string]$Root, [switch]$Quiet)
 
-    $config = Get-Content -Raw -Encoding UTF8 (Join-Path $Root 'config\sources.json') | ConvertFrom-Json
+    $config = Get-Content -Raw -Encoding UTF8 (Join-Path $Root 'config/sources.json') | ConvertFrom-Json
     $all = New-Object System.Collections.Generic.List[object]
     $health = New-Object System.Collections.Generic.List[object]
     $started = [datetime]::UtcNow
@@ -812,7 +812,7 @@ function Invoke-RadarSync {
         [Net.ServicePointManager]::DefaultConnectionLimit = $maxParallel * 4
     }
 
-    $libPath = Join-Path $Root 'lib\sources.ps1'
+    $libPath = Join-Path $Root 'lib/sources.ps1'
     $worker = {
         param($LibPath, $Source, $Defaults)
         . $LibPath
@@ -944,17 +944,17 @@ function Invoke-RadarSync {
     }
 
     # classify → resolve publishers → momentum → heat (docs/ARCHITECTURE.md)
-    $taxonomyPath = Join-Path $Root 'config\taxonomy.json'
+    $taxonomyPath = Join-Path $Root 'config/taxonomy.json'
     $taxonomy = $null
     if (Test-Path $taxonomyPath) { $taxonomy = Get-Content -Raw -Encoding UTF8 $taxonomyPath | ConvertFrom-Json }
     Set-RadarTech -Items $items -Taxonomy $taxonomy
 
-    $publishersPath = Join-Path $Root 'config\publishers.json'
+    $publishersPath = Join-Path $Root 'config/publishers.json'
     $publishers = [pscustomobject]@{ publishers = @() }
     if (Test-Path $publishersPath) { $publishers = Get-Content -Raw -Encoding UTF8 $publishersPath | ConvertFrom-Json }
-    Set-RadarPublishers -Items $items -Publishers $publishers -CachePath (Join-Path $Root 'data\history\orgs.json') -MaxLookups (Get-Prop $config.defaults 'orgLookupsPerSync' 20) -Quiet:$Quiet
+    Set-RadarPublishers -Items $items -Publishers $publishers -CachePath (Join-Path $Root 'data/history/orgs.json') -MaxLookups (Get-Prop $config.defaults 'orgLookupsPerSync' 20) -Quiet:$Quiet
 
-    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data\ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
+    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data/ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
     Set-RadarHeat -Items $items -HeatConfig $config.heat
 
     # Every item fetched now has a ledger row, tech tags, a publisher and a heat
@@ -1026,7 +1026,7 @@ function Invoke-RadarSync {
     if ($taxonomy) {
         [System.IO.File]::WriteAllText((Join-Path $dataDir 'taxonomy.js'), "window.RADAR_TAXONOMY = " + ($taxonomy | ConvertTo-Json -Depth 6 -Compress) + ";", $utf8)
     }
-    [System.IO.File]::WriteAllText((Join-Path $Root ('data\history\' + $started.ToString('yyyy-MM-dd') + '.json')), $json, $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $Root ('data/history/' + $started.ToString('yyyy-MM-dd') + '.json')), $json, $utf8)
 
     Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $done -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt
 

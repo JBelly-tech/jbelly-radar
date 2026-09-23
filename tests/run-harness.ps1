@@ -15,7 +15,14 @@ param([int]$Port = 8477, [string]$Only = '', [string]$Browser = '')
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$harnessDir = Join-Path $root 'tests\harness'
+$harnessDir = Join-Path $root 'tests/harness'
+
+# $IsWindows exists only on PowerShell 6 and later. On Windows PowerShell 5.1 it
+# is undefined, and undefined means Windows, because 5.1 runs nowhere else.
+$onWindows = $true
+if (Get-Variable -Name 'IsWindows' -ErrorAction SilentlyContinue) { $onWindows = [bool]$IsWindows }
+# $env:TEMP is a Windows variable; every platform has this.
+$tempDir = [System.IO.Path]::GetTempPath()
 
 # -Browser wins; then the usual install locations, per-user Chrome included (its
 # non-admin installer lands in LOCALAPPDATA, which is not under Program Files);
@@ -24,23 +31,47 @@ if ($Browser) {
     if (-not (Test-Path $Browser)) { Write-Output "FAIL -Browser not found: $Browser"; exit 1 }
     $browserExe = $Browser
 } else {
-    $browserExe = @(
-        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
-        "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
-        "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
-        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-        "${env:LOCALAPPDATA}\Google\Chrome\Application\chrome.exe",
-        "${env:LOCALAPPDATA}\Microsoft\Edge\Application\msedge.exe",
-        "${env:ProgramFiles}\Chromium\Application\chrome.exe"
-    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    # Per-platform install locations first, then PATH. On Windows the per-user
+    # Chrome installer lands in LOCALAPPDATA, which is not under Program Files;
+    # on macOS the browser is a bundle and the binary sits inside it.
+    $candidates = @()
+    if ($onWindows) {
+        $candidates = @(
+            "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+            "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe",
+            "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+            "${env:LOCALAPPDATA}\Google\Chrome\Application\chrome.exe",
+            "${env:LOCALAPPDATA}\Microsoft\Edge\Application\msedge.exe",
+            "${env:ProgramFiles}\Chromium\Application\chrome.exe"
+        )
+    }
+    elseif ($IsMacOS) {
+        $candidates = @(
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+            '/Applications/Chromium.app/Contents/MacOS/Chromium',
+            "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        )
+    }
+    else {
+        $candidates = @(
+            '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',
+            '/usr/bin/chromium', '/usr/bin/chromium-browser',
+            '/usr/bin/microsoft-edge', '/snap/bin/chromium'
+        )
+    }
+    $browserExe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
     if (-not $browserExe) {
-        $browserExe = (Get-Command msedge.exe, chrome.exe, chromium.exe -ErrorAction SilentlyContinue |
+        $onPath = @('msedge', 'chrome', 'google-chrome', 'google-chrome-stable',
+                    'chromium', 'chromium-browser', 'microsoft-edge')
+        $browserExe = (Get-Command $onPath -ErrorAction SilentlyContinue |
             Select-Object -First 1 -ExpandProperty Source)
     }
 }
 if (-not $browserExe) {
     Write-Output 'FAIL no headless browser found (looked for Edge, Chrome and Chromium in the usual locations and on PATH)'
-    Write-Output '     pass one explicitly:  powershell -File tests\run-harness.ps1 -Browser "C:\path\to\chrome.exe"'
+    Write-Output '     pass one explicitly:  pwsh -File tests/run-harness.ps1 -Browser <path to chrome>'
     exit 1
 }
 
@@ -56,8 +87,8 @@ if ($files.Count -eq 0) { Write-Output 'no harness files'; exit 0 }
 # CI -- it is absent, and the assertion would fail for a reason that has nothing
 # to do with the code. Seed a fixed fixture when it is missing and remove it
 # afterwards. A real synced file is never touched and never overwritten.
-$dataFile = Join-Path $root 'data\trends.json'
-$fixture = Join-Path $root 'tests\fixtures\trends.min.json'
+$dataFile = Join-Path $root 'data/trends.json'
+$fixture = Join-Path $root 'tests/fixtures/trends.min.json'
 $seeded = $false
 if (-not (Test-Path $dataFile)) {
     if (-not (Test-Path $fixture)) { Write-Output 'FAIL missing fixture tests\fixtures\trends.min.json'; exit 1 }
@@ -117,9 +148,14 @@ function Get-HarnessOutput {
 
     # port 0 lets Chromium pick a free one and write it to DevToolsActivePort, so
     # two runs on one machine cannot collide the way a fixed port would
+    # The profile path is QUOTED because a temp directory routinely contains a
+    # space -- "C:\Users\First Last\..." on Windows, "/Users/First Last/..." on
+    # macOS. Start-Process joins ArgumentList on spaces, so an unquoted path
+    # splits into two arguments, Chromium never gets a usable profile, and the
+    # only symptom is a page that produces no output at all.
     $procArgs = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
                   '--disable-extensions', '--remote-debugging-port=0',
-                  "--user-data-dir=$ProfileDir", $Url)
+                  ('--user-data-dir="' + $ProfileDir + '"'), $Url)
     $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru -WindowStyle Hidden
     $wsUrl = $null
     try {
@@ -160,16 +196,27 @@ function Get-HarnessOutput {
         # running the tests has open.
         if ($p -and -not $p.HasExited) { try { $p.Kill() } catch { } }
         $exeName = Split-Path -Leaf $BrowserExe
-        Get-CimInstance Win32_Process -Filter "Name='$exeName'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDir) } |
-            ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        $strays = @()
+        if ($onWindows) {
+            $strays = @(Get-CimInstance Win32_Process -Filter "Name='$exeName'" -ErrorAction SilentlyContinue |
+                Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDir) } |
+                ForEach-Object { $_.ProcessId })
+        }
+        else {
+            # PowerShell 7 exposes CommandLine on Get-Process; 5.1 does not, and 5.1
+            # never runs here, so this branch can rely on it.
+            $strays = @(Get-Process -ErrorAction SilentlyContinue |
+                Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDir) } |
+                ForEach-Object { $_.Id })
+        }
+        foreach ($strayId in $strays) { Stop-Process -Id $strayId -Force -ErrorAction SilentlyContinue }
     }
 }
 
 $failed = 0
 try {
 foreach ($f in $files) {
-    $profileDir = Join-Path $env:TEMP ('radar-harness-' + $f.BaseName)
+    $profileDir = Join-Path $tempDir ('radar-harness-' + $f.BaseName)
     $url = "http://localhost:$Port/tests/harness/$($f.Name)"
     $text = Get-HarnessOutput -BrowserExe $browserExe -Url $url -ProfileDir $profileDir
     $lines = @($text -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })

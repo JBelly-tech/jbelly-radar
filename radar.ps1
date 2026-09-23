@@ -25,10 +25,36 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
+
+# -- platform -----------------------------------------------------------------
+# $IsWindows exists only on PowerShell 6 and later. On Windows PowerShell 5.1 it
+# is undefined, and undefined means Windows, because 5.1 runs nowhere else.
+$script:onWindows = $true
+if (Get-Variable -Name 'IsWindows' -ErrorAction SilentlyContinue) { $script:onWindows = [bool]$IsWindows }
+
+# The child sync must run on the SAME PowerShell that started the server, or a
+# machine with both installed can run the server on one and the sync on another.
+$script:psExe = 'powershell'
+try { $script:psExe = ([System.Diagnostics.Process]::GetCurrentProcess()).MainModule.FileName } catch {
+    if (Get-Command 'pwsh' -ErrorAction SilentlyContinue) { $script:psExe = 'pwsh' }
+}
+
+function Open-InBrowser {
+    param([string]$Url)
+    # -ExecutionPolicy and the shell-execute URL handler are Windows-only; macOS
+    # and Linux each have their own opener and neither errors usefully if it is
+    # missing, so a failure here must never take the server down with it.
+    try {
+        if ($script:onWindows) { Start-Process $Url | Out-Null }
+        elseif ($IsMacOS) { & '/usr/bin/open' $Url }
+        else { & 'xdg-open' $Url }
+    }
+    catch { Write-Host ("  could not open a browser - visit {0}" -f $Url) -ForegroundColor DarkGray }
+}
 $dataDir    = Join-Path $root 'data'
 $dataFile   = Join-Path $dataDir 'trends.json'
 $statusFile = Join-Path $dataDir 'status.json'
-$syncScript = Join-Path $root 'scripts\sync.ps1'
+$syncScript = Join-Path $root 'scripts/sync.ps1'
 if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
 
 # -- background sync ----------------------------------------------------------
@@ -64,8 +90,12 @@ function Start-BackgroundSync {
     $script:lastSyncStart = [datetime]::UtcNow
     Write-Host ("  {0:HH:mm:ss}  sync started ({1})" -f (Get-Date), $Why) -ForegroundColor DarkGray
     $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = 'powershell.exe'
-    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$syncScript`" -Quiet"
+    $psi.FileName = $script:psExe
+    # -ExecutionPolicy is a Windows-only parameter: pwsh on Linux and macOS
+    # rejects it outright rather than ignoring it.
+    $policy = ''
+    if ($script:onWindows) { $policy = '-ExecutionPolicy Bypass ' }
+    $psi.Arguments = "-NoProfile $policy-File `"$syncScript`" -Quiet"
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
     $psi.WorkingDirectory = $root
@@ -114,7 +144,7 @@ if ($Every -gt 0 -and -not $NoSync) { Write-Host "  re-sync  every $Every min" -
 Write-Host "  stop     Ctrl+C" -ForegroundColor DarkGray
 Write-Host ""
 
-if (-not $NoOpen) { Start-Process $url | Out-Null }
+if (-not $NoOpen) { Open-InBrowser -Url $url }
 
 function Write-Text {
     param($Response, [int]$Status, [string]$ContentType, [string]$Body)

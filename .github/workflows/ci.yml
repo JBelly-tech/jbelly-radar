@@ -10,55 +10,90 @@ permissions:
   contents: read
 
 jobs:
+  # Every job runs on `pwsh` -- PowerShell 7, which ships on all three GitHub
+  # runner images. A claim that this runs on Linux and macOS is only worth making
+  # if something checks it on every push, so the matrix is the claim.
   check:
-    runs-on: windows-latest
+    name: checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v5
 
       - name: Test suite (parser, config, tokens, page structure)
-        shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\check.ps1
+        shell: pwsh
+        run: pwsh -NoProfile -File tests/check.ps1
 
       - name: PSScriptAnalyzer
-        shell: powershell
+        shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
           $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
           if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
           Write-Host "PSScriptAnalyzer: no errors"
 
-      # The browser harnesses need the dashboard served; they do not need a sync.
-      # run-harness.ps1 seeds tests\fixtures\trends.min.json when data\trends.json
-      # is absent, which is exactly what a fresh clone sees. radar.ps1 serves a
-      # clean 404 for that file until then, so it can start before the seed.
-      - name: Browser harnesses (headless Edge)
-        shell: powershell
+  # The browser harnesses need the dashboard served; they do not need a sync.
+  # run-harness.ps1 seeds tests/fixtures/trends.min.json when data/trends.json is
+  # absent, which is exactly what a fresh clone sees. radar.ps1 serves a clean 404
+  # for that file until then, so it can start before the seed.
+  #
+  # Ubuntu and Windows only: the macOS runner image carries no Chromium browser,
+  # and installing one would add a third-party action to the supply chain for a
+  # test of client-side JavaScript that is identical on every platform. The `check`
+  # matrix above already proves the engine itself runs on macOS.
+  harness:
+    name: browser harness (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Serve and run the harnesses
+        shell: pwsh
         run: |
-          $p = Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','radar.ps1','-NoSync','-NoOpen' -PassThru -WindowStyle Hidden
-          Start-Sleep -Seconds 6
+          $p = Start-Process pwsh -ArgumentList '-NoProfile','-File','radar.ps1','-NoSync','-NoOpen' -PassThru
           $code = 1
-          try { powershell -NoProfile -ExecutionPolicy Bypass -File tests\run-harness.ps1; $code = $LASTEXITCODE }
+          try {
+            # poll rather than sleep a fixed time: a cold runner is slower than a warm one
+            $up = $false
+            foreach ($i in 1..30) {
+              try { Invoke-WebRequest 'http://localhost:8477/api/status' -UseBasicParsing -TimeoutSec 2 | Out-Null; $up = $true; break }
+              catch { Start-Sleep -Milliseconds 700 }
+            }
+            if (-not $up) { Write-Host 'radar.ps1 never started serving'; exit 1 }
+            pwsh -NoProfile -File tests/run-harness.ps1
+            $code = $LASTEXITCODE
+          }
           finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           exit $code
 
   # Sources are public and can rate-limit or go down; this job reports, it does
-  # not gate. It exists so a silently dead source is noticed.
+  # not gate. It exists so a silently dead source is noticed. It runs on Linux
+  # because that is where a full sync -- concurrent HTTP, runspaces, file IO,
+  # atomic renames -- is least like the machine it was written on.
   sources:
-    runs-on: windows-latest
+    name: live sync
+    runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5
 
       - name: Live sync
-        shell: powershell
+        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sync.ps1
+        run: pwsh -NoProfile -File scripts/sync.ps1
 
       - name: Report source health
-        shell: powershell
+        shell: pwsh
         run: |
-          $d = Get-Content -Raw -Encoding UTF8 data\trends.json | ConvertFrom-Json
-          $d.sources | Select-Object id, status, count, ms | Format-Table -AutoSize | Out-String | Write-Host
+          $d = Get-Content -Raw -Encoding UTF8 data/trends.json | ConvertFrom-Json
+          $d.sources | Select-Object id, status, count, kept, fetched, ms | Format-Table -AutoSize | Out-String | Write-Host
           $failed = @($d.sources | Where-Object { $_.status -ne 'ok' })
           Write-Host ("{0} items, {1} source(s) not ok" -f $d.counts.total, $failed.Count)

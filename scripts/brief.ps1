@@ -56,7 +56,7 @@ function Format-Line {
     return $out
 }
 
-$taxonomy = Read-Json (Join-Path $root 'config\taxonomy.json')
+$taxonomy = Read-Json (Join-Path $root 'config/taxonomy.json')
 
 if ($List) {
     Write-Output 'verticals:'
@@ -70,8 +70,8 @@ if (-not $Vertical -and -not $All) {
     exit 1
 }
 
-$template = Read-Json (Join-Path $root 'config\brief-template.json')
-$data = Read-Json (Join-Path $root 'data\trends.json')
+$template = Read-Json (Join-Path $root 'config/brief-template.json')
+$data = Read-Json (Join-Path $root 'data/trends.json')
 $items = @($data.items)
 if ($items.Count -eq 0) { Write-Output 'no items - run a sync first'; exit 1 }
 $okSources = @($data.sources | Where-Object { $_.status -eq 'ok' }).Count
@@ -94,7 +94,7 @@ else {
 }
 
 $stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd')
-if (-not $OutDir) { $OutDir = Join-Path $root ('content\briefs\' + $stamp) }
+if (-not $OutDir) { $OutDir = Join-Path $root ('content/briefs/' + $stamp) }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
