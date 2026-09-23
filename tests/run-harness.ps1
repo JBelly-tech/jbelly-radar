@@ -216,9 +216,16 @@ function Get-HarnessOutput {
         else {
             # PowerShell 7 exposes CommandLine on Get-Process; 5.1 does not, and 5.1
             # never runs here, so this branch can rely on it.
-            $strays = @(Get-Process -ErrorAction SilentlyContinue |
-                Where-Object { $_.CommandLine -and $_.CommandLine.Contains($ProfileDir) } |
-                ForEach-Object { $_.Id })
+            #
+            # Read it ONCE into a variable. `$_.CommandLine -and $_.CommandLine.X()`
+            # reads the property twice, and we are enumerating processes that are in
+            # the middle of being killed: the guard can see a value and the call a
+            # moment later see null. That is what failed on the Linux runner.
+            $strays = @(Get-Process -ErrorAction SilentlyContinue | ForEach-Object {
+                $cmdLine = $null
+                try { $cmdLine = $_.CommandLine } catch { }
+                if ($cmdLine -and $cmdLine.Contains($ProfileDir)) { $_.Id }
+            })
         }
         foreach ($strayId in $strays) { Stop-Process -Id $strayId -Force -ErrorAction SilentlyContinue }
     }
