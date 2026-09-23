@@ -884,7 +884,7 @@ function Invoke-RadarSync {
     # merge in CONFIG ORDER: dedupe is first-wins, so this is the priority order
     foreach ($src in $config.sources) {
         if (-not (Get-Prop $src 'enabled' $true)) {
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'disabled'; count = 0; fetched = 0; cap = 0; saturated = $false; message = 'disabled in config'; ms = 0 })
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = 'disabled'; count = 0; kept = 0; fetched = 0; cap = 0; saturated = $false; message = 'disabled in config'; ms = 0 })
             continue
         }
         $r = $result[$src.id]
@@ -908,8 +908,12 @@ function Invoke-RadarSync {
             # the radar is partly a reading of config/sources.json rather than of the
             # world, and nobody can tell which. `fetched` is the count BEFORE the
             # regex gates, so saturation means the cap bit, not that a filter did.
-            $cap = [int](Get-Prop $src 'maxItems' (Get-Prop $config.defaults 'maxItems' 25))
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $n; fetched = $raw; cap = $cap; saturated = ($raw -ge $cap); message = ''; ms = $r.ms })
+            # `cap` is the FETCH cap, so "at cap" means the source stopped because of
+            # config and not because it ran out. `count` is filled after the display
+            # trim below: it is what reached data/trends.json, which is the only one
+            # of the three that reconciles with the category counts on the page.
+            $cap = Get-FetchMax -Source $src -Defaults $config.defaults
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = 0; kept = $n; fetched = $raw; cap = $cap; saturated = ($raw -ge $cap); message = ''; ms = $r.ms })
             if (-not $Quiet) {
                 $colour = 'DarkGray'
                 if ($n -eq 0) { $colour = 'DarkYellow' }
@@ -925,7 +929,7 @@ function Invoke-RadarSync {
             foreach ($k in $kept) { $all.Add($k) }
             $status = 'failed'
             if ($kept.Count -gt 0) { $status = 'stale' }
-            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = $kept.Count; fetched = 0; cap = [int](Get-Prop $src 'maxItems' (Get-Prop $config.defaults 'maxItems' 25)); saturated = $false; message = $r.error; ms = $r.ms })
+            $health.Add([pscustomobject]@{ id = $src.id; label = $src.label; category = $src.category; status = $status; count = 0; kept = $kept.Count; fetched = 0; cap = (Get-FetchMax -Source $src -Defaults $config.defaults); saturated = $false; message = $r.error; ms = $r.ms })
             if (-not $Quiet) { Write-Host ("  {0,-22} {1}  {2}" -f $src.id, $status.ToUpper(), $r.error) -ForegroundColor DarkRed }
         }
     }
@@ -979,7 +983,7 @@ function Invoke-RadarSync {
     foreach ($h in $health) {
         $n = 0
         if ($shownCount.ContainsKey($h.id)) { $n = $shownCount[$h.id] }
-        $h | Add-Member -NotePropertyName 'shown' -NotePropertyValue $n -Force
+        $h.count = $n
     }
 
     $sorted = @($display | Sort-Object -Property @{ Expression = { $_.heat }; Descending = $true }, @{ Expression = { $_.ageDays }; Descending = $false })

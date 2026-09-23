@@ -112,8 +112,9 @@ footer a { color: var(--primary); }
       <h2>Source health</h2>
       <p class="sub">
         One row per configured source. <b>fetched</b> is what the source returned,
-        <b>kept</b> is what survived that source's regex filters, and <b>at cap</b>
-        means fetched reached <code>maxItems</code> — the source stopped because of
+        <b>kept</b> is what survived that source's regex filters, <b>shown</b> is what
+        reached the dashboard after its display cap, and <b>at cap</b>
+        means fetched reached <code>catalogueMax</code> — the source stopped because of
         the configuration, not because it ran out, so it is hiding more than it shows.
         A row with kept far below fetched is a filter doing its job, not a fault.
       </p>
@@ -122,7 +123,7 @@ footer a { color: var(--primary); }
           <table id="sources">
             <thead><tr>
               <th>source</th><th>kind</th><th>status</th>
-              <th style="text-align:end">kept</th><th style="text-align:end">fetched</th>
+              <th style="text-align:end">shown</th><th style="text-align:end">kept</th><th style="text-align:end">fetched</th>
               <th style="text-align:end">cap</th>
               <th>at cap</th><th style="text-align:end">ms</th><th>message</th>
             </tr></thead>
@@ -234,6 +235,7 @@ footer a { color: var(--primary); }
         '<td class="dim">' + esc(s.category) + '</td>' +
         '<td><span class="pill ' + cls + '">' + esc(s.status) + '</span></td>' +
         '<td class="n">' + (s.count != null ? s.count : '—') + '</td>' +
+        '<td class="n dim">' + (s.kept != null ? s.kept : '—') + '</td>' +
         '<td class="n dim">' + (s.fetched != null ? s.fetched : '—') + '</td>' +
         '<td class="n dim">' + (s.cap ? s.cap : '—') + '</td>' +
         '<td>' + (s.saturated ? '<span class="pill warnc">at cap</span>' : '<span class="dim">—</span>') + '</td>' +
