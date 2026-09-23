@@ -15,8 +15,8 @@
 # saw it. Without this the catalogue starts at the day it was invented rather than
 # at the day the record does.
 #
-#   powershell -File scripts\backfill-ledger.ps1            # apply
-#   powershell -File scripts\backfill-ledger.ps1 -DryRun    # report, change nothing
+#   pwsh -File scripts/backfill-ledger.ps1            # apply
+#   pwsh -File scripts/backfill-ledger.ps1 -DryRun    # report, change nothing
 #
 # Deterministic, no model call, no network. Safe to re-run: firstSeen is only ever
 # moved EARLIER, never later, and identity is only ever FILLED IN, never overwritten

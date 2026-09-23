@@ -1,16 +1,16 @@
 # radar.ps1 — run JBelly Radar: serve the dashboard on localhost, keep the data
 # fresh in the background, open the browser.
 #
-#   .\radar.ps1                 sync when data is older than -StaleMinutes, then serve;
+#   ./radar.ps1                 sync when data is older than -StaleMinutes, then serve;
 #                               re-sync every -Every minutes while running
-#   .\radar.ps1 -Sync           sync first, whatever the cache age
-#   .\radar.ps1 -NoSync         serve the cache, never touch the network
-#   .\radar.ps1 -Every 10       background sync interval in minutes (0 = off)
-#   .\radar.ps1 -Port 9000      different port
-#   .\radar.ps1 -NoOpen         do not launch a browser
+#   ./radar.ps1 -Sync           sync first, whatever the cache age
+#   ./radar.ps1 -NoSync         serve the cache, never touch the network
+#   ./radar.ps1 -Every 10       background sync interval in minutes (0 = off)
+#   ./radar.ps1 -Port 9000      different port
+#   ./radar.ps1 -NoOpen         do not launch a browser
 #
 # Sync runs in a child PowerShell process, so the server keeps answering while
-# ~55 sources are being read; the dashboard follows data\status.json for progress.
+# ~55 sources are being read; the dashboard follows data/status.json for progress.
 # The listener binds to localhost only. Nothing is exposed to the network.
 
 [CmdletBinding()]
@@ -65,7 +65,7 @@ $script:lastSyncStart = [datetime]::MinValue
 function Test-Syncing {
     if ($script:syncProc -and -not $script:syncProc.HasExited) { return $true }
     $script:syncProc = $null
-    # a sync started elsewhere (Task Scheduler, a previous window) holds data\sync.lock
+    # a sync started elsewhere (Task Scheduler, a previous window) holds data/sync.lock
     $lockPath = Join-Path $dataDir 'sync.lock'
     if (Test-Path $lockPath) {
         $ownerPid = 0
@@ -134,7 +134,7 @@ $listener.Prefixes.Add("http://localhost:$Port/")
 try { $listener.Start() }
 catch {
     Write-Host "  cannot listen on port $Port - $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "  try: .\radar.ps1 -Port 9000" -ForegroundColor DarkGray
+    Write-Host "  try: ./radar.ps1 -Port 9000" -ForegroundColor DarkGray
     exit 1
 }
 

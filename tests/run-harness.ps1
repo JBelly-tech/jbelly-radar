@@ -1,11 +1,11 @@
 # tests/run-harness.ps1 — run every browser harness under tests/harness/ in
 # headless Edge (or Chrome) against a running radar.ps1 and report PASS/FAIL.
 #
-#   .\radar.ps1 -NoOpen -NoSync          # in one window
-#   powershell -File tests\run-harness.ps1   # in another
+#   ./radar.ps1 -NoOpen -NoSync          # in one window
+#   pwsh -File tests/run-harness.ps1   # in another
 #
-# No sync is needed first: when data\trends.json is absent this script seeds
-# tests\fixtures\trends.min.json in its place and removes it again afterwards.
+# No sync is needed first: when data/trends.json is absent this script seeds
+# tests/fixtures/trends.min.json in its place and removes it again afterwards.
 #
 # Each harness writes "PASS name" / "FAIL name: detail" lines and a final
 # "DONE n/total" into <pre id="out">; this script greps the rendered DOM.
@@ -76,7 +76,7 @@ if (-not $browserExe) {
 }
 
 try { Invoke-WebRequest -Uri "http://localhost:$Port/api/status" -UseBasicParsing -TimeoutSec 5 | Out-Null }
-catch { Write-Output "FAIL radar.ps1 is not serving on port $Port - start it with .\radar.ps1 -NoOpen -NoSync"; exit 1 }
+catch { Write-Output "FAIL radar.ps1 is not serving on port $Port - start it with ./radar.ps1 -NoOpen -NoSync"; exit 1 }
 
 $files = @(Get-ChildItem -Path $harnessDir -Filter *.html -File | Sort-Object Name)
 if ($Only) { $files = @($files | Where-Object { $_.BaseName -like $Only }) }
@@ -91,11 +91,11 @@ $dataFile = Join-Path $root 'data/trends.json'
 $fixture = Join-Path $root 'tests/fixtures/trends.min.json'
 $seeded = $false
 if (-not (Test-Path $dataFile)) {
-    if (-not (Test-Path $fixture)) { Write-Output 'FAIL missing fixture tests\fixtures\trends.min.json'; exit 1 }
+    if (-not (Test-Path $fixture)) { Write-Output 'FAIL missing fixture tests/fixtures/trends.min.json'; exit 1 }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dataFile) | Out-Null
     Copy-Item -LiteralPath $fixture -Destination $dataFile -Force
     $seeded = $true
-    Write-Output 'seeded data\trends.json from tests\fixtures\trends.min.json'
+    Write-Output 'seeded data/trends.json from tests/fixtures/trends.min.json'
 }
 
 # ── reading the result out of the page ────────────────────────────────────────
@@ -156,7 +156,11 @@ function Get-HarnessOutput {
     $procArgs = @('--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
                   '--disable-extensions', '--remote-debugging-port=0',
                   ('--user-data-dir="' + $ProfileDir + '"'), $Url)
-    $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru -WindowStyle Hidden
+    # -WindowStyle is a Windows-only parameter: pwsh on Linux and macOS rejects
+    # it outright rather than ignoring it. Headless has no window anyway, so it
+    # is belt-and-braces on Windows and an error everywhere else.
+    if ($onWindows) { $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru -WindowStyle Hidden }
+    else { $p = Start-Process -FilePath $BrowserExe -ArgumentList $procArgs -PassThru }
     $wsUrl = $null
     try {
         $deadline = (Get-Date).AddSeconds($TimeoutSec)

@@ -4,8 +4,8 @@
 # that covers this, and is it worth anything. It does NOT recommend, rank quality
 # or choose. A match means something exists and how much use it has.
 #
-#   powershell -File scripts\match-plan.ps1 -Plan config\build.example.json
-#   powershell -File scripts\match-plan.ps1 -Plan mine.json -Top 5
+#   pwsh -File scripts/match-plan.ps1 -Plan config/build.example.json
+#   pwsh -File scripts/match-plan.ps1 -Plan mine.json -Top 5
 #
 # It matches against data/ledger.json - every item the radar has EVER seen - and
 # never against data/trends.json, which holds one sync with every source capped.
@@ -59,7 +59,7 @@ if (-not (Test-Path $Plan)) { Write-Output "no plan at $Plan"; exit 1 }
 $planDoc = Read-Json $Plan
 $template = Read-Json (Join-Path $root 'config/match-template.json')
 $ledgerPath = Join-Path $root 'data/ledger.json'
-if (-not (Test-Path $ledgerPath)) { Write-Output 'no data\ledger.json - run a sync first'; exit 1 }
+if (-not (Test-Path $ledgerPath)) { Write-Output 'no data/ledger.json - run a sync first'; exit 1 }
 $ledgerRaw = Read-Json $ledgerPath
 
 # -- the catalogue ------------------------------------------------------------

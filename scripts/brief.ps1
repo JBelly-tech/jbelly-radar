@@ -6,10 +6,10 @@
 # its publisher). The judgement leads and the radar corroborates, never the
 # reverse, or the brief becomes a list of whatever churned this week.
 #
-#   powershell -File scripts\brief.ps1 -List
-#   powershell -File scripts\brief.ps1 -Vertical logistics
-#   powershell -File scripts\brief.ps1 -Vertical fintech -PerTech 4
-#   powershell -File scripts\brief.ps1 -All
+#   pwsh -File scripts/brief.ps1 -List
+#   pwsh -File scripts/brief.ps1 -Vertical logistics
+#   pwsh -File scripts/brief.ps1 -Vertical fintech -PerTech 4
+#   pwsh -File scripts/brief.ps1 -All
 #
 # Citations are FROZEN into the file. At the measured churn rate a brief that
 # points at the live radar loses about a sixth of its links within a day, so the

@@ -1,6 +1,6 @@
 # tests/check.ps1 — the whole test suite. Deterministic, no network, no model.
 #
-#   powershell -ExecutionPolicy Bypass -File tests\check.ps1
+#   powershell -ExecutionPolicy Bypass -File tests/check.ps1
 #
 # Exits 0 when clean, 1 with one FAIL line per finding.
 

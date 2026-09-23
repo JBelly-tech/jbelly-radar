@@ -5,8 +5,8 @@
 # page, its assets and a frozen snapshot of the data into one zip, so somebody can
 # see the radar without installing PowerShell, running a sync or trusting a server.
 #
-#   powershell -File scripts\pack-demo.ps1
-#   powershell -File scripts\pack-demo.ps1 -OutFile D:\somewhere\radar-demo.zip
+#   pwsh -File scripts/pack-demo.ps1
+#   pwsh -File scripts/pack-demo.ps1 -OutFile D:\somewhere\radar-demo.zip
 #
 # The snapshot is frozen at pack time. It is a demo, not a live radar: it shows
 # what the radar looked like on one date and does not update. The bundle says so,
@@ -26,7 +26,7 @@ $dataDir = Join-Path $root 'data'
 
 foreach ($needed in @('trends.js', 'taxonomy.js')) {
     if (-not (Test-Path (Join-Path $dataDir $needed))) {
-        Write-Output "missing data\$needed - run a sync first (powershell -File scripts\sync.ps1)"
+        Write-Output "missing data/$needed - run a sync first (pwsh -File scripts/sync.ps1)"
         exit 1
     }
 }
