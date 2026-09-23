@@ -643,6 +643,10 @@ function Set-RadarMomentum {
         if ($it.tech -and @($it.tech).Count -gt 0) { $entry['tech'] = @($it.tech) }
         if ($it.install) { $entry['install'] = $it.install }
         if ($it.author) { $entry['author'] = $it.author }
+        # without the unit the number is unreadable: 414,075 installs and 414,075
+        # weekly downloads are not the same claim, and a catalogue that prints the
+        # figure without saying which is inviting the wrong comparison
+        if ($null -ne $it.metric) { $entry['metricLabel'] = $it.metricLabel }
         if ($it.publisher) {
             $pubName = Get-Prop $it.publisher 'name' $null
             $pubTier = Get-Prop $it.publisher 'tier' $null
@@ -686,7 +690,7 @@ function Set-RadarMomentum {
             # Anything we cannot prove we watched arrive is a floor, not a birth date.
             if (-not $rowSeen) { $rowSeen = (Get-Prop $row 'at' $nowIso) }
             $carried = [ordered]@{}
-            foreach ($f in @('title', 'url', 'summary', 'sourceId', 'category', 'tech',
+            foreach ($f in @('title', 'url', 'summary', 'sourceId', 'category', 'tech', 'metricLabel',
                              'install', 'author', 'publisherName', 'publisherTier')) {
                 $v = Get-Prop $row $f $null
                 if ($null -ne $v) { $carried[$f] = $v }

@@ -1,0 +1,81 @@
+{
+  "$schema": "the build section of a solution architecture, machine-readable",
+  "$comment": "The architecture document is prose for people. This is its twin for the matcher, because a paragraph cannot be joined against a catalogue and 'understanding' it would put a model back in the middle of a deterministic job. Produce this alongside the document, not afterwards from it. Run it with: powershell -File scripts\\match-plan.ps1 -Plan config\\build.example.json",
+
+  "project": "Example: a small B2B SaaS with an AI assistant",
+  "generatedBy": "solution architecture, build section",
+  "date": "2026-09-24",
+
+  "requirements": [
+    {
+      "id": "auth",
+      "need": "Email and Google sign-in, team invitations, role checks on every endpoint",
+      "capability": ["auth"],
+      "choice": "Supabase Auth",
+      "alternatives": ["Clerk", "Auth0", "Keycloak"],
+      "mode": "build",
+      "decision": "open",
+      "keywords": ["auth", "authentication", "oauth", "sso", "supabase", "session", "jwt"]
+    },
+    {
+      "id": "payments",
+      "need": "Subscriptions, metered usage billing, invoices",
+      "capability": ["payments"],
+      "choice": "Stripe",
+      "alternatives": ["Paddle", "Polar", "Lemon Squeezy"],
+      "mode": "both",
+      "decision": "firm",
+      "keywords": ["stripe", "payment", "payments", "billing", "subscription", "invoice", "checkout"]
+    },
+    {
+      "id": "assistant",
+      "need": "An in-product assistant that reads the customer's own data and acts on it",
+      "capability": ["agents", "mcp"],
+      "choice": "MCP server over our own API",
+      "alternatives": [],
+      "mode": "runtime",
+      "decision": "firm",
+      "keywords": ["mcp", "model context protocol", "agent", "tool", "assistant"]
+    },
+    {
+      "id": "observability",
+      "need": "Trace every assistant call: latency, tokens, cost per customer",
+      "capability": ["observability"],
+      "choice": "OpenTelemetry + a hosted backend",
+      "alternatives": ["Langfuse", "Helicone", "Phoenix"],
+      "mode": "both",
+      "decision": "open",
+      "keywords": ["observability", "tracing", "telemetry", "opentelemetry", "monitoring", "logs", "evals"]
+    },
+    {
+      "id": "search",
+      "need": "Semantic search across the customer's uploaded documents",
+      "capability": ["rag", "vector-db"],
+      "choice": "pgvector on the existing Postgres",
+      "alternatives": ["Qdrant", "Weaviate", "Pinecone"],
+      "mode": "build",
+      "decision": "open",
+      "keywords": ["rag", "vector", "embedding", "embeddings", "pgvector", "semantic search", "retrieval"]
+    },
+    {
+      "id": "pdf-extraction",
+      "need": "Pull tables out of supplier PDFs and normalise them",
+      "capability": [],
+      "choice": "undecided",
+      "alternatives": ["pdfplumber", "Unstructured", "LlamaParse", "Azure Document Intelligence"],
+      "mode": "build",
+      "decision": "open",
+      "keywords": ["pdf", "document extraction", "table extraction", "ocr", "parsing"]
+    },
+    {
+      "id": "invoicing-ledger",
+      "need": "Double-entry bookkeeping for the finance team's export",
+      "capability": [],
+      "choice": "hand-written, domain-specific",
+      "alternatives": [],
+      "mode": "manual",
+      "decision": "firm",
+      "keywords": []
+    }
+  ]
+}

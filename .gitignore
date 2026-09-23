@@ -30,3 +30,6 @@ content/briefs/
 
 # demo bundles built by scripts/pack-demo.ps1 and attached to a release
 dist/
+
+# generated reports: reproducible from a plan plus the ledger
+content/matches/

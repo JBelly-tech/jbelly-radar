@@ -596,11 +596,11 @@
         "title": "package.name",
         "url": "package.links.npm|package.links.repository",
         "summary": "package.description",
-        "author": "package.publisher.username",
         "metric": "downloads.weekly",
         "metricLabel": "weekly downloads",
         "published": "package.date",
-        "tags": "package.keywords"
+        "tags": "package.keywords",
+        "$comment": "No author mapping on purpose. npm's search API returns publisher.username = 'GitHub Actions' for every CI-published package and carries no author field at all, so any mapping here would attribute the work to a build robot. An unattributed row is correct; a wrong name is not."
       },
       "publishedMeaning": "released"
     },

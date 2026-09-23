@@ -26,6 +26,34 @@ was.
   Identity is only ever filled in, never overwritten: a live sync is fresher
   than any snapshot. Re-running changes nothing (verified).
 
+- **Catalogue depth, separate from display depth.** `maxItems` was capping both
+  what the dashboard ranks (right) and what is fetched (wrong — it threw away the
+  answer before anything could ask). `catalogueMax` is now the fetch cap and
+  `maxItems` the display cap. Nothing needed an extra request: skills.sh already
+  ships ~600 matches in the page that 120 were read from, and the three registries
+  were each asked for 50 and kept 20–25.
+
+  | | dashboard | catalogue |
+  |---|---|---|
+  | all items | 752 (was 750) | **2,656** (was 1,555) |
+  | skills | 155 | **800** (was 158) |
+  | MCP servers | 54 | **441** (was 91) |
+
+- **`scripts/match-plan.ps1`** answers, per requirement in a build plan: is there
+  already a skill or an MCP server that covers this. `mode` picks the pool —
+  `build` searches skills, `runtime` searches MCP servers — because the two solve
+  different problems and mixing them is noise. Alternatives are only raised for a
+  requirement the architect marked `open`. Deterministic: no model, no network.
+- **`config/build.example.json`** is the plan format by example, and
+  **`config/match-template.json`** holds every word the matcher writes, in English
+  and Arabic.
+- **Keyword discrimination.** A keyword matching more than a quarter of its pool
+  is dropped and named in the report. Measured: `mode: runtime` already narrows to
+  MCP servers, so the keyword `mcp` matched all 440, every candidate scored
+  identically, and the report announced "covered" with a random server on top.
+- **`metricLabel` on ledger rows** — 414,075 installs and 414,075 weekly downloads
+  are not the same claim.
+
 ### Fixed
 
 - **The browser harness ran on a flag Edge no longer honours.** `--dump-dom`
@@ -34,13 +62,27 @@ was.
   page over the DevTools protocol, which returns the harness's own text with no
   HTML to un-escape, and polls until it prints `DONE` instead of waiting a fixed
   8 s. All 333 assertions pass again.
+- **The harness leaked browsers.** Edge's launcher hands off and exits, so killing
+  what was started killed nothing: five harnesses left 78 processes behind and the
+  next run failed with nothing to report but silence. It now sweeps by
+  `--user-data-dir`, unique per run, so it can never touch the browser the person
+  running the tests has open.
+- **npm claimed a false author.** Its search API returns
+  `publisher.username = "GitHub Actions"` for every CI-published package and
+  carries no author field, so every npm row was attributed to a build robot. The
+  mapping is gone; those rows are unattributed, which is true.
 
 ### Known limits
 
-- The catalogue only grows from what rotates. Measured over the same window:
-  MCP-tagged rows went 58 → 91, but skills went 155 → **158**, because
-  `skills-sh` is capped at 120 and returns the same top 120 every sync. Paging
-  the catalogue sources is what fixes skill coverage; the ledger alone does not.
+- Three registries report far more than is read: Smithery 17,033 servers, npm
+  74,790 packages keyworded `mcp`. Neither is paged. Depth beyond one response is
+  not obviously worth it — most of that npm tail is abandoned scaffolds, and a
+  catalogue full of them answers "is there an MCP for X" worse, not better. The
+  measurement to make first is whether any real `no coverage` result is an
+  artefact of depth.
+- 302 ledger rows are still anonymous: seen between daily snapshots, so no
+  snapshot ever recorded them. The matcher counts and reports them, because "no
+  coverage" from a partly anonymous catalogue is a weaker claim than it looks.
 
 ## [0.3.0] — 2026-09-22
 

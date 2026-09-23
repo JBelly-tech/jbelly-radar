@@ -45,7 +45,7 @@ if (-not (Test-Path $HistoryDir)) { Write-Output "no history directory at $Histo
 
 # The identity a ledger row carries, in the order Set-RadarMomentum writes them, so
 # a backfilled row and a freshly written one are indistinguishable in the file.
-$identityFields = @('title', 'url', 'summary', 'sourceId', 'category', 'tech', 'install', 'author')
+$identityFields = @('title', 'url', 'summary', 'sourceId', 'category', 'tech', 'install', 'author', 'metricLabel')
 $identityAll = $identityFields + @('publisherName', 'publisherTier')
 
 function Get-SnapshotIdentity($Item) {
