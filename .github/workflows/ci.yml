@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Monday 06:00 UTC, for the macOS job below
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
@@ -19,7 +22,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Test suite (parser, config, tokens, page structure)
+        shell: pwsh
+        run: pwsh -NoProfile -File tests/check.ps1
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
+          Write-Host "PSScriptAnalyzer: no errors"
+
+  # macOS on its own schedule, not on every push. GitHub bills a private repo's
+  # macOS minutes at 10x and Windows at 2x against the free 2,000, so a macOS job
+  # on every push is the one line in this file that could produce a bill. Weekly
+  # plus on demand is enough: macOS and Linux run the same pwsh on the same .NET,
+  # so a Linux pass is strong evidence for macOS, and this is the confirmation.
+  # Once the repository is public, Actions are unlimited and this can join the
+  # matrix above.
+  check-macos:
+    name: checks (macos-latest)
+    runs-on: macos-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.repository.visibility == 'public'
     steps:
       - uses: actions/checkout@v5
 
@@ -42,8 +71,7 @@ jobs:
   #
   # Ubuntu and Windows only: the macOS runner image carries no Chromium browser,
   # and installing one would add a third-party action to the supply chain for a
-  # test of client-side JavaScript that is identical on every platform. The `check`
-  # matrix above already proves the engine itself runs on macOS.
+  # test of client-side JavaScript that is identical on every platform.
   harness:
     name: browser harness (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
