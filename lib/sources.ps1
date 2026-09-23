@@ -544,7 +544,9 @@ function Set-RadarHeat {
 # Every item gets an entry, not only those carrying a numeric metric, which is what
 # makes "what is new since" and "how long has this been around" answerable at all.
 function Set-RadarMomentum {
-    param($Items, [string]$HistoryPath, [double]$MinBaselineHours = 12)
+    param($Items, [string]$HistoryPath, [double]$MinBaselineHours = 12, $WidenedSources = @())
+    $widened = @{}
+    foreach ($w in @($WidenedSources)) { if ($w) { $widened[$w] = $true } }
     $prev = @{}
     if (Test-Path $HistoryPath) {
         try {
@@ -620,6 +622,14 @@ function Set-RadarMomentum {
         # appeared". The distinction is free to record now and impossible to
         # reconstruct later, and publishing a floor as a birth date is exactly the
         # kind of quiet inaccuracy a dated record exists to prevent.
+        #
+        # A source whose fetch cap GREW this sync is the third case, and getting it
+        # wrong is how the record starts lying at scale. Raising catalogueMax on
+        # 2026-09-23 made 1,262 items visible at once, and every one was recorded
+        # as `observed` that day -- including 247 with more than 100,000 installs.
+        # None of them arrived that day; the window moved, not the world. A first
+        # sighting through a widened window is a floor, and $WidenedSources is how
+        # this function is told which sources widened.
         $firstSeen = $null
         $firstSeenBasis = $null
         if ($null -ne $old) {
@@ -632,7 +642,12 @@ function Set-RadarMomentum {
                 $firstSeenBasis = 'snapshot-floor'
             }
         }
-        if (-not $firstSeen) { $firstSeen = $nowIso; $firstSeenBasis = 'observed' }
+        if (-not $firstSeen) {
+            $firstSeen = $nowIso
+            # only a source that did NOT widen can claim it watched this arrive
+            if ($widened.ContainsKey($it.sourceId)) { $firstSeenBasis = 'snapshot-floor' }
+            else { $firstSeenBasis = 'observed' }
+        }
         if (-not $firstSeenBasis) { $firstSeenBasis = 'snapshot-floor' }
 
         # identity first, so `head` on the file shows what a row is before when it was
@@ -954,7 +969,22 @@ function Invoke-RadarSync {
     if (Test-Path $publishersPath) { $publishers = Get-Content -Raw -Encoding UTF8 $publishersPath | ConvertFrom-Json }
     Set-RadarPublishers -Items $items -Publishers $publishers -CachePath (Join-Path $Root 'data/history/orgs.json') -MaxLookups (Get-Prop $config.defaults 'orgLookupsPerSync' 20) -Quiet:$Quiet
 
-    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data/ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12)
+    # Which sources can see further than they could last sync. Their newly visible
+    # items did not arrive today, so they get a floor rather than an observation.
+    $widenedSources = New-Object System.Collections.Generic.List[string]
+    if ($previous -and $previous.sources) {
+        $priorCap = @{}
+        foreach ($ph in @($previous.sources)) { $priorCap[$ph.id] = [int](Get-Prop $ph 'cap' 0) }
+        foreach ($h in $health) {
+            if ($priorCap.ContainsKey($h.id) -and [int]$h.cap -gt [int]$priorCap[$h.id]) { $widenedSources.Add($h.id) }
+        }
+    }
+    $widenedList = @($widenedSources | ForEach-Object { $_ })
+    if ($widenedList.Count -gt 0 -and -not $Quiet) {
+        Write-Host ("  {0} source(s) can see further than last sync; their new items are recorded as floors" -f $widenedList.Count) -ForegroundColor DarkGray
+    }
+
+    Set-RadarMomentum -Items $items -HistoryPath (Join-Path $Root 'data/ledger.json') -MinBaselineHours (Get-Prop $config.heat 'minBaselineHours' 12) -WidenedSources $widenedList
     Set-RadarHeat -Items $items -HeatConfig $config.heat
 
     # Every item fetched now has a ledger row, tech tags, a publisher and a heat
