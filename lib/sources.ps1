@@ -46,6 +46,12 @@ function Get-CanonicalUrl {
     param([string]$Url)
     if (-not $Url) { return '' }
     $u = $Url.Trim()
+    # Only http and https survive. Every URL here came out of a third party's
+    # feed, and the dashboard renders it as a link the reader can click --
+    # escaping the surrounding text does not make `javascript:` or `data:` in an
+    # href safe. An item left with no URL is dropped by the dedupe, which is the
+    # right outcome: there was nothing to open.
+    if ($u -notmatch '^https?://') { return '' }
     $u = $u -replace '[?&](utm_[^=]+|ref|ref_src|source)=[^&]*', ''
     $u = $u -replace '[?&]+$', ''
     # stripping a leading tracking parameter can leave '&' as the first separator

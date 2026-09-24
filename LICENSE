@@ -2,11 +2,6 @@ MIT License
 
 Copyright (c) 2026 JBelly
 
-Scope: this licence covers the SOFTWARE in this repository — radar.ps1, lib/,
-scripts/, app/, tests/ and the workflow files. The curated content and the
-observation record are licensed separately, under CC BY 4.0; see LICENSE-DATA
-for what that covers and why.
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -24,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Scope of the above: the SOFTWARE in this repository — radar.ps1, lib/, scripts/,
+app/, tests/ and the workflow files. The curated content and the observation
+record are licensed separately, under CC BY 4.0; see LICENSE-DATA for what that
+covers and why.
+
+This note is kept below the licence text rather than inside it, so that the MIT
+terms remain byte-identical and a licence detector can recognise them.

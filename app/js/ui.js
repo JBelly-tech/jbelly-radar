@@ -44,6 +44,17 @@
     });
   }
 
+  // esc() makes text safe to INSERT; it does not make a scheme safe to FOLLOW.
+  // `javascript:` in an href runs on click however well the characters around it
+  // are escaped, and every URL here came out of somebody else's feed. The sync
+  // already drops anything that is not http(s), so this should never fire --
+  // which is why it is worth keeping: the day it does, something upstream is
+  // wrong, and a dead link is a better outcome than a live one.
+  function safeHref(u) {
+    var s = String(u == null ? '' : u);
+    return /^https?:\/\//i.test(s) ? esc(s) : '#';
+  }
+
   function num(n) {
     if (n == null) return '';
     if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -367,7 +378,7 @@
     el.innerHTML = rows.map(function (it) {
       return '<article class="rail__card" data-id="' + esc(it.id) + '">' +
         '<div class="rail__org">' + I.badgeCheck + esc(it.publisher.name) + (it.publisher.tier ? ' <span class="badge badge--outline badge--sm">T' + it.publisher.tier + '</span>' : '') + '</div>' +
-        '<div class="rail__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
+        '<div class="rail__title"><a href="' + safeHref(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
         '<div class="rail__meta"><span>' + esc(t(it.category)) + (it.ageDays != null ? ' · ' + esc(ago(it.ageDays)) : '') + '</span><span>' + esc(t('heat')) + ' ' + it.heat + '</span></div>' +
       '</article>';
     }).join('');
@@ -438,7 +449,7 @@
         '<div class="item__heat" title="heat ' + it.heat + '"><i style="--h:' + it.heat + '%"></i></div>' +
         '<div class="item__main">' +
           '<div class="item__title-row">' +
-            '<h3 class="item__title"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(title) + '</a></h3>' +
+            '<h3 class="item__title"><a href="' + safeHref(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(title) + '</a></h3>' +
             tierBadge(it) +
             (isNewRow ? '<span class="badge badge--new badge--sm">' + esc(t('newBadge')) + '</span>' : '') +
           '</div>' +
@@ -455,7 +466,7 @@
             '<button class="btn btn--ghost btn--icon" type="button" data-save="' + esc(it.id) + '" aria-label="' + esc(saved ? t('unsave') : t('save')) + '" aria-pressed="' + saved + '">' + (saved ? I.bookmarkFilled : I.bookmark) + '</button>' +
             '<button class="btn btn--ghost btn--icon" type="button" data-hide="' + esc(it.id) + '" aria-label="' + esc(t('hide')) + '">' + I.eyeOff + '</button>' +
             (it.install && it.install.indexOf('npx') === 0 ? '<button class="btn btn--ghost btn--icon" type="button" data-copy="' + esc(it.install) + '" aria-label="' + esc(t('copyInstall')) + '" title="' + esc(it.install) + '">' + I.copy + '</button>' : '') +
-            '<a class="btn btn--ghost btn--icon" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc(t('openLink')) + '" data-open="' + esc(it.id) + '">' + I.link + '</a>' +
+            '<a class="btn btn--ghost btn--icon" href="' + safeHref(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc(t('openLink')) + '" data-open="' + esc(it.id) + '">' + I.link + '</a>' +
           '</div>' +
         '</div>' +
       '</article>');
@@ -480,7 +491,7 @@
       return '<div class="mover">' +
         '<span class="mover__rank">' + (i + 1) + '</span>' +
         '<div class="mover__body">' +
-          '<div class="mover__name"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
+          '<div class="mover__name"><a href="' + safeHref(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
           '<div class="mover__sub">' + num(it.metric) + ' ' + esc(it.metricLabel) + ' · ' + esc(it.sourceLabel) + '</div>' +
         '</div>' +
         (it.spark ? '<div class="mover__spark">' + sparkline(it.spark, 56, 20) + '</div>' : '') +
@@ -503,7 +514,7 @@
     el.innerHTML = rows.map(function (it) {
       return '<div class="mover">' +
         '<div class="mover__body">' +
-          '<div class="mover__name"><a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
+          '<div class="mover__name"><a href="' + safeHref(it.url) + '" target="_blank" rel="noopener noreferrer" data-open="' + esc(it.id) + '">' + esc(it.title) + '</a></div>' +
           '<div class="mover__sub">' + esc(it.sourceLabel) + (it.ageDays != null ? ' · ' + esc(ago(it.ageDays)) : '') + '</div>' +
         '</div>' +
         '<button class="btn btn--ghost btn--icon" type="button" data-save="' + esc(it.id) + '" aria-label="' + esc(t('unsave')) + '" aria-pressed="true">' + I.bookmarkFilled + '</button>' +
