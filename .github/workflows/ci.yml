@@ -1,24 +1,40 @@
 name: ci
 
+# Budgeted for GitHub's Free plan, where a PRIVATE repository gets 2,000 Actions
+# minutes a month and a job is billed at 1x on Linux, 2x on Windows and 10x on
+# macOS, rounded up to the minute. Every choice below is that arithmetic:
+#
+#   per push   ubuntu checks 1x + windows checks 2x + ubuntu harness 1x  ~= 8 min
+#   per day    the live sync, once, on Linux                             ~= 2 min
+#   macOS      on request only -- one 3-minute run costs 30
+#
+# That is roughly 460 billed minutes for fifty pushes in a month, against 2,000.
+#
+# A PUBLIC repository has no Actions limit at all, so when this one is published
+# the macOS job can move back onto every push and the matrices can widen. Until
+# then the cheap combination is chosen deliberately: Linux proves POSIX, Windows
+# proves the 5.1 path, and those two cover every claim the README makes.
+
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
   schedule:
-    # Monday 06:00 UTC, for the macOS job below
-    - cron: '0 6 * * 1'
+    # 06:00 UTC daily, for the live source check below
+    - cron: '0 6 * * *'
 
 permissions:
   contents: read
 
 jobs:
-  # Every job runs on `pwsh` -- PowerShell 7, which ships on all three GitHub
-  # runner images. A claim that this runs on Linux and macOS is only worth making
-  # if something checks it on every push, so the matrix is the claim.
+  # Everything runs on `pwsh` -- PowerShell 7, which ships on all three runner
+  # images. Claiming this runs on Linux is only worth doing if something checks
+  # it on every push.
   check:
     name: checks (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -30,34 +46,17 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tests/check.ps1
 
-      - name: PSScriptAnalyzer
-        shell: pwsh
-        run: |
-          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
-          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
-          if ($r) { $r | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
-          Write-Host "PSScriptAnalyzer: no errors"
-
-  # macOS on its own schedule, not on every push. GitHub bills a private repo's
-  # macOS minutes at 10x and Windows at 2x against the free 2,000, so a macOS job
-  # on every push is the one line in this file that could produce a bill. Weekly
-  # plus on demand is enough: macOS and Linux run the same pwsh on the same .NET,
-  # so a Linux pass is strong evidence for macOS, and this is the confirmation.
-  # Once the repository is public, Actions are unlimited and this can join the
-  # matrix above.
-  check-macos:
-    name: checks (macos-latest)
-    runs-on: macos-latest
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.repository.visibility == 'public'
+  # PSScriptAnalyzer once, on the 1x runner. It installs a module on every run,
+  # which costs about a minute, and it reads the same files whatever the OS --
+  # so running it per-platform bought nothing and cost triple.
+  analyze:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     steps:
       - uses: actions/checkout@v5
 
-      - name: Test suite (parser, config, tokens, page structure)
-        shell: pwsh
-        run: pwsh -NoProfile -File tests/check.ps1
-
-      - name: PSScriptAnalyzer
-        shell: pwsh
+      - shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
           $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
@@ -66,19 +65,16 @@ jobs:
 
   # The browser harnesses need the dashboard served; they do not need a sync.
   # run-harness.ps1 seeds tests/fixtures/trends.min.json when data/trends.json is
-  # absent, which is exactly what a fresh clone sees. radar.ps1 serves a clean 404
-  # for that file until then, so it can start before the seed.
+  # absent, which is exactly what a fresh clone sees.
   #
-  # Ubuntu and Windows only: the macOS runner image carries no Chromium browser,
-  # and installing one would add a third-party action to the supply chain for a
-  # test of client-side JavaScript that is identical on every platform.
+  # Linux only. The harness exercises client-side JavaScript in Chromium, which
+  # is the same engine on every platform, so a second run on the 2x runner was
+  # paying double for the same evidence. The Windows-specific part of the runner
+  # -- its process sweep -- is covered by the checks job above.
   harness:
-    name: browser harness (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+    name: browser harness
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     steps:
       - uses: actions/checkout@v5
 
@@ -101,13 +97,28 @@ jobs:
           finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           exit $code
 
+  # macOS on request only. One run costs 30 billed minutes at the 10x rate, and
+  # macOS and Linux run the same pwsh on the same .NET, so a Linux pass is
+  # already strong evidence. Run it by hand before a release, or let it rejoin
+  # every push once this repository is public and minutes stop being counted.
+  check-macos:
+    name: checks (macos-latest)
+    runs-on: macos-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.repository.visibility == 'public'
+    steps:
+      - uses: actions/checkout@v5
+
+      - shell: pwsh
+        run: pwsh -NoProfile -File tests/check.ps1
+
   # Sources are public and can rate-limit or go down; this job reports, it does
-  # not gate. It exists so a silently dead source is noticed. It runs on Linux
-  # because that is where a full sync -- concurrent HTTP, runspaces, file IO,
-  # atomic renames -- is least like the machine it was written on.
+  # not gate. DAILY, not per push: a full sync reads 54 servers that belong to
+  # other people, and firing that at them every time someone fixes a typo is
+  # both wasteful of the minute budget and rude to them.
   sources:
     name: live sync
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5

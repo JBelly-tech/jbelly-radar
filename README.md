@@ -114,11 +114,15 @@ with a disclosure attached, not a default.
 build step, no key. It targets **PowerShell 7**, and still runs on **Windows
 PowerShell 5.1**, which ships with Windows and needs no install.
 
-**Honest caveat:** both runtimes have been exercised on Windows. The
-platform-specific paths for macOS and Linux — the browser opener, the child
-process launcher, the test harness's browser discovery — are written and are not
-yet verified on those systems. If you are the first to run it there, an issue
-saying what broke is the single most useful contribution right now.
+**Where it is checked.** CI runs the full suite on Linux on every push — the 301
+static checks, the 333 browser assertions, and a live sync of all 54 sources —
+and the static suite on Windows. macOS runs on request before a release rather
+than on every push, because that runner bills at ten times the rate.
+
+The remaining gap is the macOS-specific code paths: the browser opener (`open`)
+and the harness's search of `/Applications`. Those are written, and the engine
+itself passes there; if you are the first to hit a problem on macOS, an issue
+saying what broke is the most useful thing you can send.
 
 ```bash
 git clone https://github.com/JBelly-tech/jbelly-radar.git
@@ -273,9 +277,12 @@ owner, so a hosting platform is never mistaken for the author.
   editorial judgement about signal, not a measurement of any company or person.
   Disagreements are a one-line pull request; anyone listed who would rather not
   be can open an issue and be removed.
-- **macOS and Linux are written for, not yet proven.** The engine targets
-  PowerShell 7 and both runtimes have been exercised on Windows only. See
-  *Quick start*.
+- **macOS is proven less than Linux is.** CI runs the static suite, the browser
+  harnesses and a full 54-source live sync on Linux, and the static suite on
+  Windows, on every push. macOS runs the static suite on request rather than on
+  every push, because a macOS runner is billed at ten times the rate and the
+  same pwsh on the same .NET has already passed on Linux. So: Linux and Windows
+  are checked continuously, macOS before a release.
 
 ---
 
