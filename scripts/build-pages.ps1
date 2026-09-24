@@ -39,7 +39,7 @@ foreach ($needed in @('trends.js', 'taxonomy.js')) {
 }
 
 $trends = Get-Content -Raw -Encoding UTF8 (Join-Path $dataDir 'trends.json') | ConvertFrom-Json
-$stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd HH:mm')
+$stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd HH:mm', [System.Globalization.CultureInfo]::InvariantCulture)
 $okSources = @($trends.sources | Where-Object { $_.status -eq 'ok' }).Count
 
 if (Test-Path $OutDir) { Remove-Item -LiteralPath $OutDir -Recurse -Force }

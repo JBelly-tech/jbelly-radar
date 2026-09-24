@@ -32,7 +32,7 @@ foreach ($needed in @('trends.js', 'taxonomy.js')) {
 }
 
 $trends = Get-Content -Raw -Encoding UTF8 (Join-Path $dataDir 'trends.json') | ConvertFrom-Json
-$stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd')
+$stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
 $okSources = @($trends.sources | Where-Object { $_.status -eq 'ok' }).Count
 
 if (-not $OutFile) { $OutFile = Join-Path $root ("dist/jbelly-radar-demo-$stamp.zip") }

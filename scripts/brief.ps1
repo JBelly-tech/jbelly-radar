@@ -71,7 +71,13 @@ if (-not $Vertical -and -not $All) {
 }
 
 $template = Read-Json (Join-Path $root 'config/brief-template.json')
-$data = Read-Json (Join-Path $root 'data/trends.json')
+# data/trends.json is generated and git-ignored, so on a fresh clone it is
+# absent. Say so the way scripts/match-plan.ps1 does, rather than letting
+# Read-Json throw a PowerShell stack trace with a local path in it at the
+# first person who follows the README's command list in order.
+$dataPath = Join-Path $root 'data/trends.json'
+if (-not (Test-Path $dataPath)) { Write-Output 'no data/trends.json - run a sync first (pwsh -File scripts/sync.ps1)'; exit 1 }
+$data = Read-Json $dataPath
 $items = @($data.items)
 if ($items.Count -eq 0) { Write-Output 'no items - run a sync first'; exit 1 }
 $okSources = @($data.sources | Where-Object { $_.status -eq 'ok' }).Count
@@ -93,7 +99,7 @@ else {
     $targets = @($match[0])
 }
 
-$stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd')
+$stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
 if (-not $OutDir) { $OutDir = Join-Path $root ('content/briefs/' + $stamp) }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -143,7 +149,7 @@ function Write-Brief {
             # "seen by" for a floor, "first seen" only for a real observation
             $seen = ''
             if ($i.firstSeen) {
-                $day = ([datetime]::Parse($i.firstSeen)).ToString('yyyy-MM-dd')
+                $day = ([datetime]::Parse($i.firstSeen)).ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
                 if ((Get-P $i 'firstSeenBasis' '') -eq 'observed') {
                     $seen = (Format-Line $T.seenObserved @{ date = $day })
                 }

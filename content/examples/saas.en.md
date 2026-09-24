@@ -1,6 +1,6 @@
 # SaaS product: what to pay attention to
 
-**2026-09-24** · JBelly Radar · 751 signals from 54 public sources
+**2026-09-24** · JBelly Radar · 750 signals from 54 public sources
 
 These technologies matter for this industry. The reason given for each is a
 judgement, written before the evidence was looked at. What follows it is what
@@ -11,20 +11,20 @@ rather than take it on trust.
 
 **Why it matters here.** An agent can handle onboarding, support and reporting inside your product without a bigger team.
 
-222 signals carry this tag. The strongest:
+225 signals carry this tag. The strongest:
 
 - **[Introducing NV-Reason-CT Open 3D CT VLM for Radiologist Chain-of-Thought Reasoning](https://developer.nvidia.com/blog/introducing-nv-reason-ct-open-3d-ct-vlm-for-radiologist-chain-of-thought-reasoning)** — NVIDIA (tier 1)
-  <br>heat 92 · news · on the radar by 2026-09-23 · source date means _posted_
-- **[Manage Kubernetes Node Fleets with NodeWright](https://developer.nvidia.com/blog/manage-kubernetes-node-fleets-with-nodewright)** — NVIDIA (tier 1)
-  <br>heat 90 · news · on the radar by 2026-09-23 · source date means _posted_
+  <br>heat 91 · news · on the radar by 2026-09-23 · source date means _posted_
 - **[Agentic conversational video intelligence built on AWS](https://aws.amazon.com/blogs/machine-learning/agentic-conversational-video-intelligence-built-on-aws)** — Amazon / AWS (tier 1)
+  <br>heat 90 · news · on the radar by 2026-09-23 · source date means _posted_
+- **[Manage Kubernetes Node Fleets with NodeWright](https://developer.nvidia.com/blog/manage-kubernetes-node-fleets-with-nodewright)** — NVIDIA (tier 1)
   <br>heat 90 · news · on the radar by 2026-09-23 · source date means _posted_
 
 ## MCP
 
 **Why it matters here.** MCP servers let an AI assistant read and act on your customers' data safely.
 
-54 signals carry this tag. The strongest:
+55 signals carry this tag. The strongest:
 
 - **[@modelcontextprotocol/client](https://www.npmjs.com/package/@modelcontextprotocol/client)** — unattributed
   <br>heat 93 · repo · on the radar by 2026-09-17 · source date means _released_
@@ -37,12 +37,12 @@ rather than take it on trust.
 
 **Why it matters here.** Coding agents ship features and fixes faster than a hiring plan can.
 
-97 signals carry this tag. The strongest:
+95 signals carry this tag. The strongest:
 
 - **[Use open weight models as your AI coding agent with Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/use-open-weight-models-as-your-ai-coding-agent-with-amazon-bedrock)** — Amazon / AWS (tier 1)
-  <br>heat 90 · news · on the radar by 2026-09-23 · source date means _posted_
-- **[How SWE-Serve Exposes the Gap Between Local Tests and Live Serving](https://developer.nvidia.com/blog/how-swe-serve-exposes-the-gap-between-local-tests-and-live-serving)** — NVIDIA (tier 1)
   <br>heat 89 · news · on the radar by 2026-09-23 · source date means _posted_
+- **[How SWE-Serve Exposes the Gap Between Local Tests and Live Serving](https://developer.nvidia.com/blog/how-swe-serve-exposes-the-gap-between-local-tests-and-live-serving)** — NVIDIA (tier 1)
+  <br>heat 88 · news · on the radar by 2026-09-23 · source date means _posted_
 - **[Building the new GitHub Copilot Inline Suggestions Model: Part Two](https://code.visualstudio.com/blogs/2026/09/23/building-the-github-copilot-inline-suggestions-model-part-two)** — Microsoft (tier 1)
   <br>heat 86 · release · first seen 2026-09-23 · source date means _released_
 
@@ -50,14 +50,14 @@ rather than take it on trust.
 
 **Why it matters here.** Auth and identity are the first thing every enterprise buyer checks.
 
-6 signals carry this tag. The strongest:
+5 signals carry this tag. The strongest:
 
 - **[@modelcontextprotocol/core](https://www.npmjs.com/package/@modelcontextprotocol/core)** — unattributed
   <br>heat 87 · repo · on the radar by 2026-09-17 · source date means _released_
 - **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** — unattributed
   <br>heat 84 · repo · on the radar by 2026-09-17 · source date means _released_
 - **[Vercel Connect now supports TanStack AI](https://vercel.com/changelog/vercel-connect-tanstack-ai)** — Vercel (tier 2)
-  <br>heat 82 · release · first seen 2026-09-23 · source date means _released_
+  <br>heat 81 · release · first seen 2026-09-23 · source date means _released_
 
 ## Payments
 
@@ -76,14 +76,14 @@ rather than take it on trust.
 
 **Why it matters here.** Tracing shows which AI features cost money and which ones users love.
 
-4 signals carry this tag. The strongest:
+3 signals carry this tag. The strongest:
 
 - **[Amazon CloudWatch Omni: AI-first observability for agents and applications](https://aws.amazon.com/about-aws/whats-new/2026/09/amazon-cloudwatch-omni-ai)** — Amazon / AWS (tier 1)
   <br>heat 86 · release · on the radar by 2026-09-23 · source date means _released_
 - **[OpenTelemetry in the GitHub Copilot app](https://github.blog/changelog/2026-09-22-opentelemetry-in-the-github-copilot-app)** — GitHub (tier 2)
   <br>heat 76 · release · on the radar by 2026-09-23 · source date means _released_
-- **[truera/trulens](https://github.com/truera/trulens)** — TruEra
-  <br>heat 41 · repo · first seen 2026-09-22 · source date means _created_
+- **[Connect client traces to your logs](https://supabase.com/blog/connect-client-traces-to-your-logs)** — Supabase (tier 2)
+  <br>heat 32 · news · on the radar by 2026-09-17 · source date means _posted_
 
 
 ---

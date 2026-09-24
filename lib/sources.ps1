@@ -233,8 +233,15 @@ function Get-GitHubItems {
     $q = Get-Prop $Source 'query' ''
     $createdDays = Get-Prop $Source 'createdWithinDays' $null
     $pushedDays  = Get-Prop $Source 'pushedWithinDays' $null
-    if ($createdDays) { $q = $q + ' created:>' + ([datetime]::UtcNow.AddDays(-[int]$createdDays)).ToString('yyyy-MM-dd') }
-    if ($pushedDays)  { $q = $q + ' pushed:>'  + ([datetime]::UtcNow.AddDays(-[int]$pushedDays)).ToString('yyyy-MM-dd') }
+    # InvariantCulture is not decoration. 'yyyy-MM-dd' renders in the CURRENT
+    # culture's CALENDAR, so on an ar-SA machine this reads created:>1448-03-12
+    # (Umm al-Qura) and on th-TH created:>2569-08-25 (Buddhist era). GitHub
+    # rejects both, and the failure is a query that quietly returns the wrong
+    # set. Every date this project writes into a URL, a filename or a document
+    # goes through InvariantCulture for the same reason; 'o' does not need it,
+    # because the round-trip specifier is Gregorian by definition.
+    if ($createdDays) { $q = $q + ' created:>' + ([datetime]::UtcNow.AddDays(-[int]$createdDays)).ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture) }
+    if ($pushedDays)  { $q = $q + ' pushed:>'  + ([datetime]::UtcNow.AddDays(-[int]$pushedDays)).ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture) }
 
     $max = Get-FetchMax -Source $Source -Defaults $Defaults
     $url = 'https://api.github.com/search/repositories?q=' + [uri]::EscapeDataString($q.Trim()) +
@@ -808,7 +815,6 @@ function Invoke-RadarSync {
     try {
     $statusPath = Join-Path $dataDir 'status.json'
     $enabled = @($config.sources | Where-Object { Get-Prop $_ 'enabled' $true })
-    $done = 0
     # the previous run, for stale-while-error retention
     $previous = $null
     $prevPath = Join-Path $dataDir 'trends.json'
@@ -1062,9 +1068,13 @@ function Invoke-RadarSync {
     if ($taxonomy) {
         [System.IO.File]::WriteAllText((Join-Path $dataDir 'taxonomy.js'), "window.RADAR_TAXONOMY = " + ($taxonomy | ConvertTo-Json -Depth 6 -Compress) + ";", $utf8)
     }
-    [System.IO.File]::WriteAllText((Join-Path $Root ('data/history/' + $started.ToString('yyyy-MM-dd') + '.json')), $json, $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $Root ('data/history/' + $started.ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture) + '.json')), $json, $utf8)
 
-    Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $done -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt
+    # Done is the count of sources actually finished. The progress loop above
+    # reports it correctly while the sync runs; this final write used to pass a
+    # variable that was initialised to 0 and never touched, so a completed sync
+    # left data/status.json saying "done 0 of 54".
+    Write-RadarStatus -Path $statusPath -State 'idle' -StartedAt $started -Done $enabled.Count -Total $enabled.Count -Current '' -Sources $health -GeneratedAt $payload.generatedAt
 
     return $payload
     }

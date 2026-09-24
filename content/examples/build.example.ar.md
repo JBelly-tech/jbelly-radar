@@ -1,6 +1,6 @@
 # Example: a small B2B SaaS with an AI assistant: شو بيغطيه الرادار أصلًا
 
-**2026-09-24** · رادار JBelly · مطابَق مع 2705 عنصر بالكتالوج (800 سكيل، 460 خادم MCP)
+**2026-09-24** · رادار JBelly · مطابَق مع 2729 عنصر بالكتالوج (803 سكيل، 468 خادم MCP)
 
 كل متطلب تحت جاي من قسم البناء بالمعمارية، مش من الرادار. الرادار بيجاوب سؤال
 واحد بس عنه: في إشي موجود بيغطي هاد، وبيسوى إشي ولا لأ.
@@ -26,13 +26,13 @@
   <br>94,104 installs · موجود بالرادار من 2026-09-23 - auth
   <br>`npx skills add get-convex/agent-skills`
 
-_متعلّم `open`، فالبدائل انفحصت كمان._
+_متعلّم `open`. طلع مغطّى، فما انفتحت البدائل._
 
 ### payments - Subscriptions, metered usage billing, invoices
 
 **المختار:** Stripe
 
-11 مرشّح بالكتالوج. أقواهم:
+12 مرشّح بالكتالوج. أقواهم:
 
 - **[stripe-best-practices](https://github.com/stripe/ai)** - Stripe
   <br>88,170 installs · موجود بالرادار من 2026-09-23 - stripe, payments
@@ -50,7 +50,7 @@ _متعلّم `firm`، فهاد بينذكر وما بينفتح من جديد._
 
 **المختار:** MCP server over our own API
 
-173 مرشّح بالكتالوج. أقواهم:
+178 مرشّح بالكتالوج. أقواهم:
 
 - **[@typia/mcp](https://www.npmjs.com/package/@typia/mcp)** - ناشر غير محدّد
   <br>14,815 weekly downloads · موجود بالرادار من 2026-09-23 - model context protocol, tool
@@ -78,7 +78,7 @@ _متعلّم `firm`، فهاد بينذكر وما بينفتح من جديد._
   <br>98,331 installs · موجود بالرادار من 2026-09-23 - observability
   <br>`npx skills add microsoft/azure-skills`
 
-_متعلّم `open`، فالبدائل انفحصت كمان._
+_متعلّم `open`. طلع مغطّى، فما انفتحت البدائل._
 
 ### search - Semantic search across the customer's uploaded documents
 
@@ -93,7 +93,7 @@ _متعلّم `open`، فالبدائل انفحصت كمان._
 - **[001TMF/harness-forge](https://github.com/001TMF/harness-forge)** - 001TMF
   <br>80 stars · موجود بالرادار من 2026-09-23 - retrieval
 
-_متعلّم `open`، فالبدائل انفحصت كمان._
+_متعلّم `open`. طلع مغطّى، فما انفتحت البدائل._
 
 ### pdf-extraction - Pull tables out of supplier PDFs and normalise them
 
@@ -109,7 +109,7 @@ _متعلّم `open`، فالبدائل انفحصت كمان._
 - **[virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill)** - virgiliojr94
   <br>32,142 stars · موجود بالرادار من 2026-09-17 - pdf
 
-_متعلّم `open`، فالبدائل انفحصت كمان._
+_متعلّم `open`. طلع مغطّى، فما انفتحت البدائل._
 
 ## مش شغل الرادار
 

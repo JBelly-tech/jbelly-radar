@@ -1,6 +1,6 @@
 # Example: a small B2B SaaS with an AI assistant: what the radar already covers
 
-**2026-09-24** · JBelly Radar · matched against 2705 catalogued items (800 skills, 460 MCP servers)
+**2026-09-24** · JBelly Radar · matched against 2729 catalogued items (803 skills, 468 MCP servers)
 
 Each requirement below comes from the build section of the architecture, not
 from the radar. The radar only answers one question about it: is there already
@@ -27,13 +27,13 @@ use it has, never that it is good. Read the source before you install it.
   <br>94,104 installs · on the radar by 2026-09-23 - auth
   <br>`npx skills add get-convex/agent-skills`
 
-_Marked `open`, so the alternatives were checked too._
+_Marked `open`. It came back covered, so the alternatives were not raised._
 
 ### payments - Subscriptions, metered usage billing, invoices
 
 **Chosen:** Stripe
 
-11 candidate(s) in the catalogue. The strongest:
+12 candidate(s) in the catalogue. The strongest:
 
 - **[stripe-best-practices](https://github.com/stripe/ai)** - Stripe
   <br>88,170 installs · on the radar by 2026-09-23 - stripe, payments
@@ -51,7 +51,7 @@ _Marked `firm`, so this is reported and not reopened._
 
 **Chosen:** MCP server over our own API
 
-173 candidate(s) in the catalogue. The strongest:
+178 candidate(s) in the catalogue. The strongest:
 
 - **[@typia/mcp](https://www.npmjs.com/package/@typia/mcp)** - no named publisher
   <br>14,815 weekly downloads · on the radar by 2026-09-23 - model context protocol, tool
@@ -79,7 +79,7 @@ _Marked `firm`, so this is reported and not reopened._
   <br>98,331 installs · on the radar by 2026-09-23 - observability
   <br>`npx skills add microsoft/azure-skills`
 
-_Marked `open`, so the alternatives were checked too._
+_Marked `open`. It came back covered, so the alternatives were not raised._
 
 ### search - Semantic search across the customer's uploaded documents
 
@@ -94,7 +94,7 @@ _Marked `open`, so the alternatives were checked too._
 - **[001TMF/harness-forge](https://github.com/001TMF/harness-forge)** - 001TMF
   <br>80 stars · on the radar by 2026-09-23 - retrieval
 
-_Marked `open`, so the alternatives were checked too._
+_Marked `open`. It came back covered, so the alternatives were not raised._
 
 ### pdf-extraction - Pull tables out of supplier PDFs and normalise them
 
@@ -110,7 +110,7 @@ _Marked `open`, so the alternatives were checked too._
 - **[virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill)** - virgiliojr94
   <br>32,142 stars · on the radar by 2026-09-17 - pdf
 
-_Marked `open`, so the alternatives were checked too._
+_Marked `open`. It came back covered, so the alternatives were not raised._
 
 ## Not the radar's business
 

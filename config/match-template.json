@@ -29,7 +29,7 @@
     "candidateMeta": "  <br>{metric} {metricLabel} · {seen}{tech}",
     "installLine": "  <br>`{install}`",
     "altHeading": "**Alternatives checked:**",
-    "altCovered": "- **{alt}** - covered: {title} ({metric} {metricLabel})",
+    "altCovered": "- **{alt}** - covered: {title}{usage}",
     "altNone": "- **{alt}** - nothing in the catalogue",
     "altAdvice": "The radar can say which alternative has support. It cannot say which is right.",
     "unattributed": "no named publisher",
@@ -68,7 +68,11 @@
       "",
       "*JBelly Radar · CC BY 4.0*"
     ],
-    "broadNote": "_Ignored as too broad for this pool (each matched over a quarter of it): {words}. A keyword that matches everything ranks nothing._"
+    "broadNote": "_Ignored as too broad for this pool (each matched over a quarter of it): {words}. A keyword that matches everything ranks nothing._",
+    "altUsage": " ({metric} {metricLabel})",
+    "altByPublisher": " (from {who}; no usage figure recorded)",
+    "altBroad": "- **{alt}** - too broad a word to search on: it matches more than a quarter of the pool, so a match proves nothing",
+    "openCovered": "_Marked `open`. It came back covered, so the alternatives were not raised._"
   },
   "ar": {
     "title": "# {project}: شو بيغطيه الرادار أصلًا",
@@ -97,7 +101,7 @@
     "candidateMeta": "  <br>{metric} {metricLabel} · {seen}{tech}",
     "installLine": "  <br>`{install}`",
     "altHeading": "**البدائل اللي انفحصت:**",
-    "altCovered": "- **{alt}** - مغطّى: {title} ({metric} {metricLabel})",
+    "altCovered": "- **{alt}** - مغطّى: {title}{usage}",
     "altNone": "- **{alt}** - ولا إشي بالكتالوج",
     "altAdvice": "الرادار بيقدر يقول أي بديل إله سند. ما بيقدر يقول أي واحد صح.",
     "unattributed": "ناشر غير محدّد",
@@ -132,6 +136,10 @@
       "",
       "*رادار JBelly · CC BY 4.0*"
     ],
-    "broadNote": "_انشالوا لأنهم عامّين على هالمجموعة (كل وحدة طابقت أكتر من ربعها): {words}. الكلمة اللي بتطابق كل إشي ما بترتّب ولا إشي._"
+    "broadNote": "_انشالوا لأنهم عامّين على هالمجموعة (كل وحدة طابقت أكتر من ربعها): {words}. الكلمة اللي بتطابق كل إشي ما بترتّب ولا إشي._",
+    "altUsage": " ({metric} {metricLabel})",
+    "altByPublisher": " (من {who}؛ ما في رقم استخدام مسجّل)",
+    "altBroad": "- **{alt}** - كلمة عامّة كتير للبحث فيها: بتطابق أكتر من ربع المجموعة، فالمطابقة ما بتثبت إشي",
+    "openCovered": "_متعلّم `open`. طلع مغطّى، فما انفتحت البدائل._"
   }
 }

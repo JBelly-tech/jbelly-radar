@@ -56,8 +56,8 @@ foreach ($id in @($ledger.Keys)) {
     # matches nothing. Normalise, and do it in UTC, which is what the ledger stores.
     if (-not $fs) { continue }
     $day = ''
-    if ($fs -is [datetime]) { $day = $fs.ToUniversalTime().ToString('yyyy-MM-dd') }
-    else { try { $day = ([datetime]::Parse("$fs")).ToUniversalTime().ToString('yyyy-MM-dd') } catch { continue } }
+    if ($fs -is [datetime]) { $day = $fs.ToUniversalTime().ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture) }
+    else { try { $day = ([datetime]::Parse("$fs")).ToUniversalTime().ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture) } catch { continue } }
     if ($day -ne $On) { continue }
     $examined++
     $basis = $null

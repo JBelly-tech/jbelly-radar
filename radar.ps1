@@ -200,6 +200,24 @@ try {
             }
 
             if ($path -eq '/api/sync' -and $req.HttpMethod -eq 'POST') {
+                # A cross-origin POST with no custom header is a "simple request":
+                # the browser sends it without a preflight, so any page open in
+                # any tab could make this machine fetch 54 sources. The reply is
+                # not readable cross-origin, so nothing leaks -- but nobody
+                # else's page gets to spend your bandwidth either.
+                #
+                # Sec-Fetch-Site is sent by every current browser and says where
+                # the request came from; a request without it is not from a
+                # browser at all (curl, a script) and is allowed, because those
+                # can run sync.ps1 directly anyway and blocking them would only
+                # break tooling.
+                $site = $req.Headers['Sec-Fetch-Site']
+                $origin = $req.Headers['Origin']
+                $sameOrigin = (-not $site) -or ($site -eq 'same-origin') -or ($site -eq 'none')
+                if (-not $sameOrigin) {
+                    Write-Text $res 403 'application/json; charset=utf-8' ('{"error":"cross-origin sync refused","origin":' + (ConvertTo-Json ("$origin")) + '}')
+                    continue
+                }
                 $started = Start-BackgroundSync -Why 'dashboard'
                 Write-Text $res 202 'application/json; charset=utf-8' ('{"started":' + $started.ToString().ToLower() + ',"status":' + (Get-StatusJson) + '}')
                 continue
@@ -223,7 +241,41 @@ try {
             if ($path.EndsWith('/')) { $path = $path + 'index.html' }
 
             # Static file, confined to the project folder.
-            $relative = $path.TrimStart('/').Replace('/', '\')
+            #
+            # The URL separator is left as '/'. Windows accepts it everywhere --
+            # GetFullPath, Test-Path and File::Open all normalise it -- and on
+            # Linux and macOS it is already the separator, so one spelling is
+            # correct on every platform and the rewrite this line used to do was
+            # work nobody needed.
+            #
+            # It was NOT the portability bug it looks like. '\' is an ordinary
+            # filename character on Unix, so the rewritten path reads as one that
+            # could never resolve -- yet the CI browser harness served five static
+            # files from Ubuntu with the rewrite still in place, so something in
+            # the Join-Path/GetFullPath chain was absorbing it. Removing it is a
+            # simplification, A/B tested byte-identical on Windows including the
+            # traversal guard, not a fix for a break anyone observed.
+            #
+            # GetFullPath still collapses '..', and the StartsWith check below is
+            # what actually confines the result to the project folder.
+            $relative = $path.TrimStart('/')
+
+            # The dashboard, the harness, the config the page reads and the data
+            # are the whole of what this server has any business handing out.
+            # Without a list it served the entire working directory: verified,
+            # GET /.git/config returned the file. On a developer's machine that
+            # file can hold a credential, and .git beside it holds every version
+            # of everything else. Rejecting any segment that begins with a dot
+            # covers .git, .env and every other dotfile in one rule, including
+            # inside an allowed folder.
+            $allowedRoots = @('app', 'config', 'data', 'tests')
+            $segments = @($relative -split '/' | Where-Object { $_ })
+            $hidden = @($segments | Where-Object { $_.StartsWith('.') }).Count -gt 0
+            if ($segments.Count -eq 0 -or $hidden -or ($allowedRoots -notcontains $segments[0].ToLowerInvariant())) {
+                Write-Text $res 404 'text/plain; charset=utf-8' 'not found'
+                continue
+            }
+
             $full = [System.IO.Path]::GetFullPath((Join-Path $root $relative))
             if (-not $full.StartsWith($root + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path $full -PathType Leaf)) {
                 Write-Text $res 404 'text/plain; charset=utf-8' 'not found'

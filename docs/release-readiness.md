@@ -311,8 +311,10 @@ What the sweep did turn up:
 | `LICENSE-DATA:39` | the CC BY attribution line |
 | `CONTRIBUTING.md:57` | `jbelly-ui` link |
 
-`git grep -i mohammadJohar` over tracked files now returns nothing. Both JSON
-files re-parse and the Arabic strings are byte-identical apart from the URL.
+Grepping the tracked files for the owner's personal account name now returns
+nothing — the name is not written out here either, for the same reason the email
+is not. Both JSON files re-parse and the Arabic strings are byte-identical apart
+from the URL.
 
 **Generated, gitignored, not published** — reported for completeness, no action
 needed, but do not commit them as-is:
@@ -324,28 +326,33 @@ needed, but do not commit them as-is:
 - `data/ledger.json` **is committed** and was checked: it holds third-party
   titles, URLs and authors only. No personal identifier.
 
-**The history itself — B0, and the only finding here that files cannot show.**
-`LICENSE` and `LICENSE-DATA` are copyright "JBelly" and `git config user.name`
-is `JBelly`, so everything visible reads as the brand. But:
+**The history itself — B0. RESOLVED 2026-09-24.**
 
-```
-$ git log --format='%ae %an' | sort -u
-mohammadasadjohar@gmail.com JBelly
-```
+Every commit then in the repository carried the owner's personal email address
+in both the author and committer fields. `LICENSE` and `git config user.name`
+already read `JBelly`, so everything visible looked like the brand; the address
+appears only once a repository is public, on every commit page, in the API and
+in every generated `.patch`.
 
-All 25 commits carry a personal Gmail address in the author field, and
-`.git/config` still sets it locally, so the next commit adds a twenty-sixth.
-Publishing exposes it on every commit page, in the API, and in every generated
-`.patch`. This is the owner's call to fix and it is destructive, so nothing was
-changed here. The order that works:
+What was done, in the order that matters:
 
-1. `git config --local user.email` → a noreply or organisation address, **first**,
-   so no further commits inherit it.
-2. Rewrite the existing 25 authors (`git filter-repo --mailmap`, or a fresh
-   squashed initial commit if the granular history is not worth keeping).
-3. Only then push to the organisation.
+1. `git config --local user.email` set to a neutral address, **first**, so no
+   further commit could inherit the old one.
+2. Every existing commit rewritten, author and committer.
+3. The tag `v0.3.0` and its release rebuilt on the rewritten commit — a tag
+   keeps its target reachable even after the branch that held it is gone, so
+   leaving it behind would have left the old history reachable.
+4. Only then published to the organisation.
 
-Doing (3) before (1) and (2) cannot be undone — GitHub keeps orphaned commits
+Verified afterwards against GitHub, not locally: every commit reachable from
+`main`, author and committer both, reads
+`JBelly <jbelly-tech@users.noreply.github.com>`, and the repository holds no
+other ref.
+
+The address itself is deliberately not quoted anywhere in this document. It was,
+in the original version of this section, which made this file the last place in
+the repository where it appeared — a review artefact undoing the fix it asked
+for. Doing step 4 before 1-3 cannot be undone: GitHub keeps orphaned commits
 reachable by SHA, and forks and mirrors keep them regardless.
 
 ---

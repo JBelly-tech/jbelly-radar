@@ -89,7 +89,7 @@ $ordered = @($snapshots | Sort-Object at)
 
 if (-not $Quiet) {
     Write-Output ("replaying {0} snapshot(s), {1} to {2}" -f $ordered.Count,
-        $ordered[0].at.ToString('yyyy-MM-dd'), $ordered[$ordered.Count - 1].at.ToString('yyyy-MM-dd'))
+        $ordered[0].at.ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture), $ordered[$ordered.Count - 1].at.ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture))
 }
 
 # ── earliest proven sighting per id ───────────────────────────────────────────

@@ -1,6 +1,6 @@
 # منتج SaaS: شو يستاهل انتباهك
 
-**2026-09-24** · رادار JBelly · 751 إشارة من 54 مصدر عام
+**2026-09-24** · رادار JBelly · 750 إشارة من 54 مصدر عام
 
 هاي التقنيات بتهمّ هالقطاع. سبب كل وحدة حُكم مكتوب قبل ما ننظر للأدلة،
 واللي بعده هو اللي شافه الرادار هالأسبوع — عشان تفحص الحكم عليه بدل ما
@@ -10,20 +10,20 @@
 
 **ليش بتهمّ هون.** وكيل ذكي بيقدر يتولى تسجيل العملاء الجدد والدعم والتقارير داخل منتجك بدون ما توسّع الفريق.
 
-222 إشارة بتحمل هالوسم. أقواهم:
+225 إشارة بتحمل هالوسم. أقواهم:
 
 - **[Introducing NV-Reason-CT Open 3D CT VLM for Radiologist Chain-of-Thought Reasoning](https://developer.nvidia.com/blog/introducing-nv-reason-ct-open-3d-ct-vlm-for-radiologist-chain-of-thought-reasoning)** — NVIDIA (طبقة 1)
-  <br>حرارة 92 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
-- **[Manage Kubernetes Node Fleets with NodeWright](https://developer.nvidia.com/blog/manage-kubernetes-node-fleets-with-nodewright)** — NVIDIA (طبقة 1)
-  <br>حرارة 90 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
+  <br>حرارة 91 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
 - **[Agentic conversational video intelligence built on AWS](https://aws.amazon.com/blogs/machine-learning/agentic-conversational-video-intelligence-built-on-aws)** — Amazon / AWS (طبقة 1)
+  <br>حرارة 90 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
+- **[Manage Kubernetes Node Fleets with NodeWright](https://developer.nvidia.com/blog/manage-kubernetes-node-fleets-with-nodewright)** — NVIDIA (طبقة 1)
   <br>حرارة 90 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
 
 ## بروتوكول MCP
 
 **ليش بتهمّ هون.** خوادم MCP بتخلي المساعد الذكي يقرأ بيانات عملائك ويتصرف عليها بشكل آمن.
 
-54 إشارة بتحمل هالوسم. أقواهم:
+55 إشارة بتحمل هالوسم. أقواهم:
 
 - **[@modelcontextprotocol/client](https://www.npmjs.com/package/@modelcontextprotocol/client)** — ناشر غير محدّد
   <br>حرارة 93 · repo · موجود بالرادار من 2026-09-17 · تاريخ المصدر بيعني _released_
@@ -36,12 +36,12 @@
 
 **ليش بتهمّ هون.** وكلاء البرمجة بيطلّعوا ميزات وإصلاحات أسرع من أي خطة توظيف.
 
-97 إشارة بتحمل هالوسم. أقواهم:
+95 إشارة بتحمل هالوسم. أقواهم:
 
 - **[Use open weight models as your AI coding agent with Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/use-open-weight-models-as-your-ai-coding-agent-with-amazon-bedrock)** — Amazon / AWS (طبقة 1)
-  <br>حرارة 90 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
-- **[How SWE-Serve Exposes the Gap Between Local Tests and Live Serving](https://developer.nvidia.com/blog/how-swe-serve-exposes-the-gap-between-local-tests-and-live-serving)** — NVIDIA (طبقة 1)
   <br>حرارة 89 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
+- **[How SWE-Serve Exposes the Gap Between Local Tests and Live Serving](https://developer.nvidia.com/blog/how-swe-serve-exposes-the-gap-between-local-tests-and-live-serving)** — NVIDIA (طبقة 1)
+  <br>حرارة 88 · news · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _posted_
 - **[Building the new GitHub Copilot Inline Suggestions Model: Part Two](https://code.visualstudio.com/blogs/2026/09/23/building-the-github-copilot-inline-suggestions-model-part-two)** — Microsoft (طبقة 1)
   <br>حرارة 86 · release · شوفناه أول مرة 2026-09-23 · تاريخ المصدر بيعني _released_
 
@@ -49,14 +49,14 @@
 
 **ليش بتهمّ هون.** المصادقة والهوية أول شي بيفحصه أي عميل مؤسسي قبل ما يشتري.
 
-6 إشارة بتحمل هالوسم. أقواهم:
+5 إشارة بتحمل هالوسم. أقواهم:
 
 - **[@modelcontextprotocol/core](https://www.npmjs.com/package/@modelcontextprotocol/core)** — ناشر غير محدّد
   <br>حرارة 87 · repo · موجود بالرادار من 2026-09-17 · تاريخ المصدر بيعني _released_
 - **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** — ناشر غير محدّد
   <br>حرارة 84 · repo · موجود بالرادار من 2026-09-17 · تاريخ المصدر بيعني _released_
 - **[Vercel Connect now supports TanStack AI](https://vercel.com/changelog/vercel-connect-tanstack-ai)** — Vercel (طبقة 2)
-  <br>حرارة 82 · release · شوفناه أول مرة 2026-09-23 · تاريخ المصدر بيعني _released_
+  <br>حرارة 81 · release · شوفناه أول مرة 2026-09-23 · تاريخ المصدر بيعني _released_
 
 ## المدفوعات
 
@@ -75,14 +75,14 @@
 
 **ليش بتهمّ هون.** التتبع بيوريك أي ميزات ذكاء اصطناعي بتكلفك مصاري وأي وحدة بيحبها المستخدمين.
 
-4 إشارة بتحمل هالوسم. أقواهم:
+3 إشارة بتحمل هالوسم. أقواهم:
 
 - **[Amazon CloudWatch Omni: AI-first observability for agents and applications](https://aws.amazon.com/about-aws/whats-new/2026/09/amazon-cloudwatch-omni-ai)** — Amazon / AWS (طبقة 1)
   <br>حرارة 86 · release · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _released_
 - **[OpenTelemetry in the GitHub Copilot app](https://github.blog/changelog/2026-09-22-opentelemetry-in-the-github-copilot-app)** — GitHub (طبقة 2)
   <br>حرارة 76 · release · موجود بالرادار من 2026-09-23 · تاريخ المصدر بيعني _released_
-- **[truera/trulens](https://github.com/truera/trulens)** — TruEra
-  <br>حرارة 41 · repo · شوفناه أول مرة 2026-09-22 · تاريخ المصدر بيعني _created_
+- **[Connect client traces to your logs](https://supabase.com/blog/connect-client-traces-to-your-logs)** — Supabase (طبقة 2)
+  <br>حرارة 32 · news · موجود بالرادار من 2026-09-17 · تاريخ المصدر بيعني _posted_
 
 
 ---

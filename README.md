@@ -123,10 +123,13 @@ with a disclosure attached, not a default.
 build step, no key. It targets **PowerShell 7**, and still runs on **Windows
 PowerShell 5.1**, which ships with Windows and needs no install.
 
-**Where it is checked.** CI runs the full suite on Linux on every push — the 301
-static checks, the 333 browser assertions, and a live sync of all 54 sources —
-and the static suite on Windows. macOS runs on request before a release rather
-than on every push, because that runner bills at ten times the rate.
+**Where it is checked.** On every push, CI runs the 302 static checks on Linux
+and on Windows, and the 333 browser assertions on Linux. A live sync of all 54
+sources runs daily rather than per push, because it reads other people's servers
+and a typo fix is no reason to make them answer; it reports and does not gate,
+since a third party going down is not this project breaking. macOS runs the
+static suite on request before a release, because that runner bills at ten times
+the rate.
 
 The remaining gap is the macOS-specific code paths: the browser opener (`open`)
 and the harness's search of `/Applications`. Those are written, and the engine
@@ -176,7 +179,7 @@ pwsh -File scripts/sync.ps1              # headless sync, for cron or Task Sched
 pwsh -File scripts/match-plan.ps1        # match a build plan against the catalogue
 pwsh -File scripts/brief.ps1 -List       # the verticals a brief can be written for
 pwsh -File scripts/pack-demo.ps1         # zip a frozen, double-clickable demo
-pwsh -File tests/check.ps1               # the static suite (300 checks)
+pwsh -File tests/check.ps1               # the static suite (302 checks)
 pwsh -File tests/run-harness.ps1         # the browser harnesses (needs radar.ps1 running)
 ```
 
@@ -286,11 +289,12 @@ owner, so a hosting platform is never mistaken for the author.
   editorial judgement about signal, not a measurement of any company or person.
   Disagreements are a one-line pull request; anyone listed who would rather not
   be can open an issue and be removed.
-- **macOS is proven less than Linux is.** CI runs the static suite, the browser
-  harnesses and a full 54-source live sync on Linux, and the static suite on
-  Windows, on every push. macOS runs the static suite on request rather than on
-  every push, because a macOS runner is billed at ten times the rate and the
-  same pwsh on the same .NET has already passed on Linux. So: Linux and Windows
+- **macOS is proven less than Linux is.** CI runs the static suite and the
+  browser harnesses on Linux and the static suite on Windows, on every push, and
+  a full 54-source live sync daily. macOS runs the static suite on request
+  rather than on every push, because a macOS runner is billed at ten times the
+  rate and the same pwsh on the same .NET has already passed on Linux. So: Linux
+  and Windows
   are checked continuously, macOS before a release.
 
 ---

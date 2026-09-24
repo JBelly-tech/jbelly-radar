@@ -127,7 +127,11 @@ foreach ($c in $catalogue) {
 }
 foreach ($key in $unitCount.Keys) {
     $vals = @($unitCount[$key] | Sort-Object)
-    if ($vals.Count -ge $minForFloor) { $median[$key] = $vals[[int]($vals.Count / 2)] }
+    # [math]::Floor, not [int]: PowerShell's [int] cast rounds .5 to EVEN, so
+    # [int](11/2) is 6 while [int](13/2) is 6 -- the index walks one past the
+    # median for half of all odd counts. Measured on the live ledger: mcp|stars
+    # (n=95) read index 48 instead of 47, mcp|uses (n=47) index 24 instead of 23.
+    if ($vals.Count -ge $minForFloor) { $median[$key] = $vals[[int][math]::Floor($vals.Count / 2)] }
 }
 
 # -- matching -----------------------------------------------------------------
@@ -219,7 +223,7 @@ function Get-Matches {
         @{ Expression = { if ($null -ne (Get-P $_.row 'metric' $null)) { [double](Get-P $_.row 'metric' 0) } else { -1 } }; Descending = $true })
 }
 
-$stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd')
+$stamp = ([datetime]::UtcNow).ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
 $planName = [System.IO.Path]::GetFileNameWithoutExtension($Plan)
 if (-not $OutDir) { $OutDir = Join-Path $root ('content/matches/' + $stamp) }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
@@ -261,17 +265,33 @@ foreach ($req in @($planDoc.requirements)) {
     # A `firm` row was decided before the radar was asked, and reopening it every
     # time something new ships is how a project never ships.
     $alts = New-Object System.Collections.Generic.List[object]
-    if ($decision -eq 'open' -and $status -ne 'covered') {
+    $altsChecked = ($decision -eq 'open' -and $status -ne 'covered')
+    if ($altsChecked) {
         foreach ($a in @(Get-P $req 'alternatives' @())) {
-            $am = Get-Matches -Pool $pool -Keywords @($a)
+            # Through Select-Discriminating, exactly like the main path. Skipping
+            # it here is the same defect that block was written to stop, one
+            # branch over: an alternative named `mcp` matched all 466 MCP rows,
+            # the ranking fell through to raw usage, and the report answered
+            # "covered: <whatever has the most stars>" -- confidently, about
+            # nothing. An alternative too broad to discriminate is no evidence
+            # that the alternative is covered.
+            $asel = Select-Discriminating -Pool $pool -Keywords @($a)
+            $am = @()
+            if (@($asel.keep).Count -gt 0) { $am = Get-Matches -Pool $pool -Keywords $asel.keep }
             $as = @($am | Where-Object { $_.strong })
-            $alts.Add([pscustomobject]@{ name = $a; hit = $(if ($as.Count -gt 0) { $as[0] } else { $null }) })
+            $alts.Add([pscustomobject]@{
+                name  = $a
+                hit   = $(if ($as.Count -gt 0) { $as[0] } else { $null })
+                broad = (@($asel.keep).Count -eq 0)
+            })
         }
     }
     # Windows PowerShell 5.1 throws "Argument types do not match" on @() over an
     # empty generic List inside a hashtable literal; copy through the pipeline.
     $altList = @($alts | ForEach-Object { $_ })
-    $results.Add([pscustomobject]@{ req = $req; status = $status; matches = $m; alts = $altList; broad = @($sel.broad) })
+    $results.Add([pscustomobject]@{
+        req = $req; status = $status; matches = $m; alts = $altList
+        broad = @($sel.broad); altsChecked = $altsChecked })
 }
 
 function Write-Report {
@@ -328,7 +348,7 @@ function Write-Report {
                     # UTC, like the report's own date: rendering one in local time and
                     # the other in UTC puts an item's first sighting a day after the
                     # report that found it
-                    $day = ([datetime]::Parse($fs)).ToUniversalTime().ToString('yyyy-MM-dd')
+                    $day = ([datetime]::Parse($fs)).ToUniversalTime().ToString('yyyy-MM-dd', [System.Globalization.CultureInfo]::InvariantCulture)
                     if ((Get-P $r 'firstSeenBasis' '') -eq 'observed') { $seen = (Format-Line $T.seenObserved @{ date = $day }) }
                     else { $seen = (Format-Line $T.seenFloor @{ date = $day }) }
                 }
@@ -351,12 +371,20 @@ function Write-Report {
                 & $add $T.altHeading
                 & $add ''
                 foreach ($a in @($res.alts)) {
+                    if ($a.broad) { & $add (Format-Line $T.altBroad @{ alt = $a.name }); continue }
                     if ($a.hit) {
                         $hr = $a.hit.row
+                        # A figure with no unit, or no figure at all, must not be
+                        # printed as one: "(18,176 )" and "(- )" both read as
+                        # evidence and are neither. The row still qualified --
+                        # through its publisher tier -- so it is reported as
+                        # covered, without a number it cannot support.
                         $hm = Get-P $hr 'metric' $null
-                        $hmText = '-'
-                        if ($null -ne $hm) { $hmText = ('{0:N0}' -f [double]$hm) }
-                        & $add (Format-Line $T.altCovered @{ alt = $a.name; title = (Get-P $hr 'title' ''); metric = $hmText; metricLabel = (Get-P $hr 'metricLabel' '') })
+                        $unit = Get-P $hr 'metricLabel' ''
+                        $usage = ''
+                        if ($null -ne $hm -and $unit) { $usage = (Format-Line $T.altUsage @{ metric = ('{0:N0}' -f [double]$hm); metricLabel = $unit }) }
+                        elseif (Get-P $hr 'publisherName' '') { $usage = (Format-Line $T.altByPublisher @{ who = (Get-P $hr 'publisherName' '') }) }
+                        & $add (Format-Line $T.altCovered @{ alt = $a.name; title = (Get-P $hr 'title' ''); usage = $usage })
                     }
                     else { & $add (Format-Line $T.altNone @{ alt = $a.name }) }
                 }
@@ -369,8 +397,14 @@ function Write-Report {
                 & $add (Format-Line $T.broadNote @{ words = (@($res.broad) -join ', ') })
                 & $add ''
             }
+            # "the alternatives were checked too" is only true when they were.
+            # They are raised solely for an `open` requirement that did NOT come
+            # back covered, so on the shipped example that note was appearing
+            # under four requirements with no alternatives block above it.
             $decision = Get-P $req 'decision' 'open'
-            if ($decision -eq 'firm') { & $add $T.firmNote } else { & $add $T.openNote }
+            if ($decision -eq 'firm') { & $add $T.firmNote }
+            elseif ($res.altsChecked) { & $add $T.openNote }
+            else { & $add $T.openCovered }
             & $add ''
         }
     }
