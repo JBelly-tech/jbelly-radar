@@ -214,5 +214,9 @@ try {
   }
 } catch (e) {
   console.log(`lookup failed: ${e.message}`);
-  process.exit(1);
+  // exitCode, not exit(): process.exit() while a fetch handle is still closing
+  // aborts libuv with "Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)",
+  // which buries the real message under a crash dump. Setting the code lets
+  // Node finish closing and leave with the same status.
+  process.exitCode = 1;
 }

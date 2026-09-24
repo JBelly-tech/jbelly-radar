@@ -116,15 +116,27 @@ jobs:
       - shell: pwsh
         run: pwsh -NoProfile -File tests/check.ps1
 
-  # Sources are public and can rate-limit or go down; this job reports, it does
-  # not gate. DAILY, not per push: a full sync reads 54 servers that belong to
-  # other people, and firing that at them every time someone fixes a typo is
-  # both wasteful of the minute budget and rude to them.
+  # The weekly sync. It does two jobs that share one read of the sources, which
+  # is the whole reason they are one job: reading 54 servers that belong to
+  # other people twice, to produce two artefacts from the same data, would be
+  # rude for no gain.
+  #
+  #   1. It reports source health, so a feed that has gone quiet is noticed.
+  #      This does not gate: a third party going down is not this project
+  #      breaking, hence continue-on-error.
+  #   2. It refreshes data/index.json, which the published agent skill fetches.
+  #      That file is the only thing in this repository that other people's
+  #      tools depend on being current, and a skill promising "from a record"
+  #      over a record nobody refreshes is just a stale search.
   sources:
-    name: live sync
+    name: weekly sync and index
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     continue-on-error: true
+    # the one job here allowed to write, and only so the refreshed index and
+    # ledger land in the repository
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -141,3 +153,31 @@ jobs:
           $d.sources | Select-Object id, status, count, kept, fetched, ms | Format-Table -AutoSize | Out-String | Write-Host
           $failed = @($d.sources | Where-Object { $_.status -ne 'ok' })
           Write-Host ("{0} items, {1} source(s) not ok" -f $d.counts.total, $failed.Count)
+
+      - name: Rebuild the published index
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/build-index.ps1
+
+      # A thin sync must not overwrite a good index with a worse one. The radar
+      # keeps every row it has ever seen, so the catalogue only grows; an index
+      # that suddenly shrank means the sync failed, not that the world did.
+      - name: Refuse to publish a shrunken index
+        shell: pwsh
+        run: |
+          $new = (Get-Content -Raw -Encoding UTF8 data/index.json | ConvertFrom-Json).counts.items
+          git stash push --quiet data/index.json
+          $old = (Get-Content -Raw -Encoding UTF8 data/index.json | ConvertFrom-Json).counts.items
+          git stash pop --quiet
+          Write-Host ("index: {0} -> {1} items" -f $old, $new)
+          if ($new -lt $old) { Write-Host "::error::the index shrank from $old to $new; not committing"; exit 1 }
+
+      - name: Commit the refreshed record
+        shell: pwsh
+        run: |
+          git config user.name  'JBelly'
+          git config user.email 'jbelly-tech@users.noreply.github.com'
+          git add data/index.json data/ledger.json
+          if (git diff --cached --quiet) { Write-Host 'nothing changed'; exit 0 }
+          $n = (Get-Content -Raw -Encoding UTF8 data/index.json | ConvertFrom-Json).counts.items
+          git commit -m "Refresh the published record ($n items)" -m "Weekly sync. data/index.json is what the agent skill fetches."
+          git push

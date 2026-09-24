@@ -35,6 +35,27 @@ a [plan match](content/examples/build.example.en.md)
 ([عربي](content/examples/build.example.ar.md)) and a
 [brief](content/examples/saas.en.md) ([عربي](content/examples/saas.ar.md)).
 
+### Inside a coding agent, skip all of it
+
+```bash
+npx skills add JBelly-tech/jbelly-radar
+```
+
+That installs [`ai-tool-lookup`](skills/ai-tool-lookup/SKILL.md) — one command
+that answers *does a skill or an MCP server already cover this* from the same
+record, without cloning anything:
+
+```
+$ node skills/ai-tool-lookup/scripts/lookup.mjs "stripe billing" --kind mcp
+
+  @stripe/mcp
+    8,607 weekly downloads · on the radar by 2026-09-23
+    https://www.npmjs.com/package/@stripe/mcp
+```
+
+It fetches one public JSON file, matches locally, and returns a short answer.
+No model call, no account, no key. The record behind it is refreshed weekly.
+
 ---
 
 ## What you get
