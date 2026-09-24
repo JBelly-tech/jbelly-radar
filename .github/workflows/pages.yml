@@ -18,6 +18,10 @@ on:
     # 06:30 UTC, half an hour after ci.yml's source check, so a broken source is
     # already visible in that run before this one publishes anything
     - cron: '30 6 * * *'
+  # Fires the moment this repository goes from private to public. The README
+  # links to the demo, and without this the link would be dead from the instant
+  # anyone could first read it until the next scheduled run.
+  public:
   workflow_dispatch:
 
 permissions:
