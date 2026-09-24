@@ -7,6 +7,11 @@ data/trends.js
 data/taxonomy.js
 data/history/
 !data/ledger.json
+
+# data/index.json is PUBLISHED, not generated-and-forgotten: the agent skill in
+# skills/ fetches it from this repository over raw.githubusercontent, so it has
+# to be here. Built by scripts/build-index.ps1 from the ledger.
+!data/index.json
 data/status.json
 data/*.tmp
 
