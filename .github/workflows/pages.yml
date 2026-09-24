@@ -1,26 +1,30 @@
 name: demo
 
-# Publishes the dashboard to GitHub Pages over a snapshot that is rebuilt every
-# day, so the first thing a visitor can do is look at the thing rather than
-# install it.
+# Publishes the dashboard to GitHub Pages over a SAMPLE snapshot committed to
+# the repository, so the first thing a visitor can do is look at the thing
+# rather than install it.
 #
-# It runs a real sync of all 54 sources and deploys what comes back. The page is
-# the same page the repository ships -- scripts/build-pages.ps1 copies app/ and
-# data/ without rewriting a single path -- so the demo cannot drift into being a
-# different product that merely resembles this one.
+# It deliberately does NOT sync. A demo that re-syncs runs forever on the
+# owner's account: their Actions, their name in the user agent, and their
+# machine asking 54 other people's servers for data every day so that strangers
+# can look at a page. The point of the demo is that someone sees the shape and
+# then runs it themselves, which a frozen sample does exactly as well. It also
+# cannot pretend to be live, which the banner on the page says outright.
 #
-# Pages on the Free plan requires a PUBLIC repository, so the deploy step is
-# guarded on visibility. While this repository is private the build still runs
-# on demand and proves it works; only the publish waits.
+# So this workflow reads data/sample/, copies files, and deploys. No network,
+# no third-party load, nothing recurring in anyone's name.
 
 on:
-  schedule:
-    # 06:30 UTC, half an hour after ci.yml's source check, so a broken source is
-    # already visible in that run before this one publishes anything
-    - cron: '30 6 * * *'
-  # Fires the moment this repository goes from private to public. The README
-  # links to the demo, and without this the link would be dead from the instant
-  # anyone could first read it until the next scheduled run.
+  push:
+    branches: [main]
+    # only when something that changes the published page changes
+    paths:
+      - 'app/**'
+      - 'data/sample/**'
+      - 'scripts/build-pages.ps1'
+      - '.github/workflows/pages.yml'
+  # fires the moment the repository goes from private to public, so the README's
+  # demo link is never dead
   public:
   workflow_dispatch:
 
@@ -37,40 +41,31 @@ concurrency:
 
 jobs:
   build:
-    name: sync and stage
+    name: stage the sample
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Live sync
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pwsh -NoProfile -File scripts/sync.ps1
-
-      # A sync that returned almost nothing would publish an empty radar and look
-      # like the project is dead. Better to fail the build and leave yesterday's
-      # site up, which is what a failed deploy does.
-      - name: Refuse to publish a thin snapshot
-        shell: pwsh
-        run: |
-          $d = Get-Content -Raw -Encoding UTF8 data/trends.json | ConvertFrom-Json
-          $ok = @($d.sources | Where-Object { $_.status -eq 'ok' }).Count
-          Write-Host ("{0} items from {1} healthy sources" -f $d.counts.total, $ok)
-          if ($d.counts.total -lt 300) { Write-Host "::error::only $($d.counts.total) items; not publishing"; exit 1 }
-          if ($ok -lt 30) { Write-Host "::error::only $ok healthy sources; not publishing"; exit 1 }
-
       - name: Stage the site
         shell: pwsh
-        run: pwsh -NoProfile -File scripts/build-pages.ps1 -OutDir _site
+        run: pwsh -NoProfile -File scripts/build-pages.ps1 -Sample -OutDir _site
 
-      # enablement: true turns Pages on if it is not already. Without it the
-      # first run after going public fails with "Get Pages site failed ... Not
-      # Found" -- which is not a misconfiguration, just Pages never having been
-      # switched on, and it is the one moment nobody is watching for a red X.
+      - name: Check the sample is intact
+        shell: pwsh
+        run: |
+          $page = Get-Content -Raw _site/app/index.html
+          if ($page -notmatch 'window\.RADAR_STATIC = true') { Write-Host '::error::the static flag did not land'; exit 1 }
+          if ($page -notmatch 'Beta') { Write-Host '::error::the beta notice did not land'; exit 1 }
+          if (Test-Path _site/app/ops) { Write-Host '::error::the operator console must not ship'; exit 1 }
+          $js = Get-Content -Raw _site/data/trends.js
+          if ($js.Length -lt 100000) { Write-Host "::error::trends.js is only $($js.Length) bytes"; exit 1 }
+          Write-Host "staged: $((Get-ChildItem _site -Recurse -File).Count) files"
+
       - uses: actions/configure-pages@v5
         if: github.event.repository.visibility == 'public'
         with:
+          # turns Pages on if it was never enabled; without it the first run
+          # after going public fails on "Get Pages site failed ... Not Found"
           enablement: true
 
       - uses: actions/upload-pages-artifact@v3

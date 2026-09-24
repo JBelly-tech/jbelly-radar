@@ -1,6 +1,14 @@
 # JBelly Radar
 
-[![ci](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml) · MIT + CC BY 4.0 · PowerShell 7 or Windows PowerShell 5.1 · no dependencies, no build step, no API key, **no model call**
+[![ci](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml) · **v0.4.0-beta** · MIT + CC BY 4.0 · PowerShell 7 or Windows PowerShell 5.1 · no dependencies, no build step, no API key, **no model call**
+
+> **Beta.** It works and it is tested — 302 static checks, 333 browser
+> assertions, CI on Linux and Windows — but it has been used in earnest by one
+> person on one operating system. The macOS paths are the least exercised, and
+> the plan matcher is the newest part and the only one that makes a judgement
+> rather than a measurement. Treat its verdicts as a shortlist, not an answer.
+> [Tell us where it is wrong](https://github.com/JBelly-tech/jbelly-radar/issues)
+> — that is what this release is for.
 
 When you start a project and choose your tools, the honest answer to *"is there
 already a skill or an MCP server that covers this?"* usually comes from a web
@@ -14,9 +22,11 @@ It has two faces. A **dashboard** answers *what changed since yesterday and how
 much does it matter to me.* A **catalogue** answers *does something already cover
 this requirement, and does anyone actually use it.*
 
-**[Open the live demo →](https://JBelly-tech.github.io/jbelly-radar/)** — the real
-dashboard over a snapshot rebuilt daily. Nothing to install, and nothing is sent
-anywhere: personalisation lives in your own browser.
+**[Open the demo →](https://JBelly-tech.github.io/jbelly-radar/)** — the real
+dashboard over a **fixed sample**, so you can see the shape without installing
+anything. It does not update: a demo that re-synced would run forever on one
+person's account and point 54 other people's servers at a page shown to
+strangers. Run it locally and the radar is live and yours.
 
 ![JBelly Radar](docs/screenshot-dark.png)
 

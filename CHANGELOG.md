@@ -4,7 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0-beta] — 2026-09-24
+
+**First public release, and it is a beta.** Everything here works and is
+tested — 302 static checks, 333 browser assertions, CI green on Linux and
+Windows — but it has been used in earnest by one person, on one operating
+system. The two places most likely to bite first are the macOS code paths,
+which CI cannot reach, and the plan matcher, which is the newest code and the
+only part that makes a judgement rather than a measurement. Treat its verdicts
+as a shortlist, not an answer, and please say where it is wrong.
+
+The published demo runs on **committed sample data and does not update**. A
+demo that re-synced would run forever on the maintainer's account and point 54
+other people's servers at a page shown to strangers; a frozen sample shows the
+same shape and costs nobody anything after the day it was taken.
 
 The ledger becomes a catalogue: it remembers what an item was, not only that it
 was.

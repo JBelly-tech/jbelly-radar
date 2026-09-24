@@ -23,22 +23,45 @@
 [CmdletBinding()]
 param(
     [string]$OutDir = '',
+    [switch]$Sample,
     [switch]$Quiet
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$dataDir = Join-Path $root 'data'
 if (-not $OutDir) { $OutDir = Join-Path $root 'dist/site' }
+
+# -Sample builds from the committed snapshot in data/sample/ instead of from a
+# live sync. That is what the published demo uses, on purpose:
+#
+#   a demo that re-syncs runs on the OWNER'S account forever -- their Actions,
+#   their name in the user agent, their machine asking 54 other people's servers
+#   for data every single day, to show strangers a page. The point of the demo is
+#   that someone sees the shape and then runs it themselves. A frozen sample does
+#   that exactly as well, costs nobody anything after the day it was taken, and
+#   is more honest besides: it cannot pretend to be live.
+$dataDir = Join-Path $root 'data'
+if ($Sample) { $dataDir = Join-Path $root 'data/sample' }
 
 foreach ($needed in @('trends.js', 'taxonomy.js')) {
     if (-not (Test-Path (Join-Path $dataDir $needed))) {
-        Write-Output "missing data/$needed - run a sync first (pwsh -File scripts/sync.ps1)"
+        if ($Sample) { Write-Output "missing data/sample/$needed" }
+        else { Write-Output "missing data/$needed - run a sync first (pwsh -File scripts/sync.ps1)" }
         exit 1
     }
 }
 
-$trends = Get-Content -Raw -Encoding UTF8 (Join-Path $dataDir 'trends.json') | ConvertFrom-Json
+# The sample ships only the .js files. They are the same payload as trends.json
+# wrapped in one assignment, so the counts are read back out of the wrapper
+# rather than committing a second 634 KB copy of the same bytes.
+$trendsPath = Join-Path $dataDir 'trends.json'
+if (Test-Path $trendsPath) {
+    $trends = Get-Content -Raw -Encoding UTF8 $trendsPath | ConvertFrom-Json
+}
+else {
+    $wrapped = Get-Content -Raw -Encoding UTF8 (Join-Path $dataDir 'trends.js')
+    $trends = ($wrapped -replace '^\s*window\.RADAR_DATA\s*=\s*', '').TrimEnd() -replace ';$', '' | ConvertFrom-Json
+}
 $stamp = ([datetime]::Parse($trends.generatedAt)).ToUniversalTime().ToString('yyyy-MM-dd HH:mm', [System.Globalization.CultureInfo]::InvariantCulture)
 $okSources = @($trends.sources | Where-Object { $_.status -eq 'ok' }).Count
 
@@ -82,7 +105,7 @@ $html = $html.Replace($anchor, $flag + $anchor)
 # stale numbers. It uses the page's own tokens, so it follows light, dark and RTL.
 $banner = @"
 <div class="demo-note" dir="auto">
-  <span><strong>Public snapshot</strong> &middot; $($trends.counts.total) signals from $okSources sources, collected $stamp UTC &middot; rebuilt daily</span>
+  <span><strong>Beta &middot; sample data</strong> &middot; $($trends.counts.total) signals from $okSources sources, collected once on $stamp UTC. This page does not update &mdash; it is here to show the shape.</span>
   <a href="https://github.com/JBelly-tech/jbelly-radar">Run it yourself for a live radar &rarr;</a>
 </div>
 <style>

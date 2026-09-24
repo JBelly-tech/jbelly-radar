@@ -22,7 +22,12 @@ on:
   workflow_dispatch:
   schedule:
     # 06:00 UTC daily, for the live source check below
-    - cron: '0 6 * * *'
+    # Monday 06:00 UTC. Weekly, not daily: the source check below is the only
+    # thing here that touches anyone else's servers, and it runs in the
+    # maintainer's name. Once a week is enough to notice a source that has gone
+    # quiet, and seven times less traffic pointed at people who did not ask for
+    # it. The published demo does not sync at all.
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
