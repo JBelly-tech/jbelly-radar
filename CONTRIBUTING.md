@@ -54,7 +54,7 @@ momentum are computed once, for every source, afterwards.
 
 ## Design changes
 
-The interface follows [`jbelly-ui`](https://github.com/jbelly-tech/jbelly-ui).
+The interface follows [`jbelly-ui`](https://github.com/JBelly-tech/jbelly-ui).
 A visual change that alters the product's identity — palette, shape, density,
 motion, the signature element — updates `design/personality.md` in the same
 commit.

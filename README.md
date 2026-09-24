@@ -1,6 +1,6 @@
 # JBelly Radar
 
-[![ci](https://github.com/jbelly-tech/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/jbelly-tech/jbelly-radar/actions/workflows/ci.yml) · MIT + CC BY 4.0 · PowerShell 7 or Windows PowerShell 5.1 · no dependencies, no build step, no API key, **no model call**
+[![ci](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml) · MIT + CC BY 4.0 · PowerShell 7 or Windows PowerShell 5.1 · no dependencies, no build step, no API key, **no model call**
 
 When you start a project and choose your tools, the honest answer to *"is there
 already a skill or an MCP server that covers this?"* usually comes from a web
@@ -121,7 +121,7 @@ yet verified on those systems. If you are the first to run it there, an issue
 saying what broke is the single most useful contribution right now.
 
 ```bash
-git clone https://github.com/jbelly-tech/jbelly-radar.git
+git clone https://github.com/JBelly-tech/jbelly-radar.git
 cd jbelly-radar
 pwsh ./radar.ps1
 ```
@@ -391,7 +391,7 @@ jbelly-radar/
 
 ## Design
 
-The interface is built with [`jbelly-ui`](https://github.com/jbelly-tech/jbelly-ui),
+The interface is built with [`jbelly-ui`](https://github.com/JBelly-tech/jbelly-ui),
 the house UI system: semantic colour tokens, no raw palette values outside
 `app/tokens.css`, exact control sizes, four states per async region, full
 keyboard support, light and dark, LTR and RTL. The product's own choices — signal

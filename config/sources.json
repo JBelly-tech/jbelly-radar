@@ -6,7 +6,7 @@
     "parallelFetches": 8,
     "$parallelFetches": "How many sources are fetched at once. Fetching is almost all of a sync and each source waits on a different host, so this sets the wall clock: at 1 the sync is sequential, and above that it is roughly the slowest single source. Raise it if your network is fast, lower it if a host starts rate-limiting you.",
     "maxItems": 25,
-    "userAgent": "jbelly-radar/1.0 (local research dashboard; +https://github.com/jbelly-tech/jbelly-radar)",
+    "userAgent": "jbelly-radar/1.0 (local research dashboard; +https://github.com/JBelly-tech/jbelly-radar)",
     "$userAgent": "Identify honestly. A source that only answers a browser user agent is a source saying no: disable it or use its documented API. Never put a Mozilla/5.0 prefix here.",
     "$filters": "Per-source 'requireMatch' / 'excludeMatch' are .NET regexes tested against title + summary. They are the config-side filter, so a noisy feed never needs a code change.",
     "orgLookupsPerSync": 20,
