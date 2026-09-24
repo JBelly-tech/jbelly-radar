@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/JBelly-tech/jbelly-radar/actions/workflows/ci.yml) · **v0.4.0-beta** · MIT + CC BY 4.0 · PowerShell 7 or Windows PowerShell 5.1 · no dependencies, no build step, no API key, **no model call**
 
-> **Beta.** It works and it is tested — 302 static checks, 333 browser
+> **Beta.** It works and it is tested — 303 static checks, 333 browser
 > assertions, CI on Linux and Windows — but it has been used in earnest by one
 > person on one operating system. The macOS paths are the least exercised, and
 > the plan matcher is the newest part and the only one that makes a judgement
@@ -10,10 +10,10 @@
 > [Tell us where it is wrong](https://github.com/JBelly-tech/jbelly-radar/issues)
 > — that is what this release is for.
 
-When you start a project and choose your tools, the honest answer to *"is there
-already a skill or an MCP server that covers this?"* usually comes from a web
-search, a leaderboard's front page, or whatever your coding agent happened to
-remember. All three answer *what is popular right now*, not *what exists*.
+When you start a project and choose your tools, the answer to *"is there already
+a skill or an MCP server that covers this?"* usually comes from a web search, a
+leaderboard's front page, or whatever your coding agent happened to remember.
+All three answer *what is popular right now*, not *what exists*.
 JBelly Radar reads 54 public sources on a schedule, keeps a permanent record of
 every item it has ever seen, and answers that question from the record instead —
 deterministically, on your own machine, with no model anywhere in the path.
@@ -70,8 +70,8 @@ and dark, keyboard-reachable throughout. Your reading behaviour stays in your
 browser's `localStorage` and is never sent anywhere.
 
 The **radar scope** is the signature view: every signal is a blip, sector =
-category, distance from the centre = heat, size = popularity, an outline for
-items from notable organisations. It ships with a screen-reader table, because a
+category, distance from the centre = heat with the hottest at the centre, size =
+popularity, an outline for items from notable organisations. It ships with a screen-reader table, because a
 chart that only works visually is half a chart.
 
 ### 2. The ledger — what exists
@@ -154,7 +154,7 @@ with a disclosure attached, not a default.
 build step, no key. It targets **PowerShell 7**, and still runs on **Windows
 PowerShell 5.1**, which ships with Windows and needs no install.
 
-**Where it is checked.** On every push, CI runs the 302 static checks on Linux
+**Where it is checked.** On every push, CI runs the 303 static checks on Linux
 and on Windows, and the 333 browser assertions on Linux. A live sync of all 54
 sources runs daily rather than per push, because it reads other people's servers
 and a typo fix is no reason to make them answer; it reports and does not gate,
@@ -210,7 +210,7 @@ pwsh -File scripts/sync.ps1              # headless sync, for cron or Task Sched
 pwsh -File scripts/match-plan.ps1        # match a build plan against the catalogue
 pwsh -File scripts/brief.ps1 -List       # the verticals a brief can be written for
 pwsh -File scripts/pack-demo.ps1         # zip a frozen, double-clickable demo
-pwsh -File tests/check.ps1               # the static suite (302 checks)
+pwsh -File tests/check.ps1               # the static suite (303 checks)
 pwsh -File tests/run-harness.ps1         # the browser harnesses (needs radar.ps1 running)
 ```
 
@@ -299,20 +299,19 @@ owner, so a hosting platform is never mistaken for the author.
 - **It does not judge quality.** A match means something exists and how much use
   it has. Nothing here is a recommendation, a rating, or a certification. Read
   the source before you install it.
-- **It does not read the whole world.** Three registries report far more than is
+- **It does not read the whole world.** Two registries report far more than is
   read — Smithery 17,033 servers, npm 74,790 packages keyworded `mcp` — and
   neither is paged. A `no coverage` result may be an artefact of depth.
-- **The matcher's usage floor is unit-blind, today.** "Strong" means a curated
-  publisher or usage above the catalogue median for its kind — but a kind mixes
-  units (skills.sh installs, npm weekly downloads, GitHub stars), so a
-  1,300-star repository is compared against a median in installs and reported as
-  not strong. A GitHub-hosted skill or MCP server currently reaches *covered*
-  almost only via its publisher tier. See
-  [docs/release-readiness.md](docs/release-readiness.md) — this is the top item
-  on the fix list, not a design choice.
-- **Its record is partly anonymous.** Roughly 300 ledger rows are a date and
-  nothing else: the radar saw them before it started recording identity, and no
-  snapshot caught them. The matcher counts and reports them, because "no
+- **The tech tags it matches on are derived, not declared.** A technology tag
+  comes from the item's own title and summary, and a tag hit is weighted as
+  highly as a title hit — so a phrase that only appeared in a summary can be
+  laundered into a tag and then paid the title rate. It makes the matcher
+  over-report *covered*. See
+  [docs/release-readiness.md](docs/release-readiness.md); it is the top item on
+  the fix list.
+- **Its record is partly anonymous.** A few hundred ledger rows are a date and
+  nothing else — 280 of 3,042 at the time of writing: the radar saw them before
+  it started recording identity, and no snapshot caught them. The matcher counts and reports them, because "no
   coverage" from a partly anonymous catalogue is a weaker claim than it looks.
 - **It is not a news reader.** The same story arriving from Hacker News and
   TechCrunch appears once per URL, not once per story. Clustering is deferred.
@@ -320,19 +319,18 @@ owner, so a hosting platform is never mistaken for the author.
   editorial judgement about signal, not a measurement of any company or person.
   Disagreements are a one-line pull request; anyone listed who would rather not
   be can open an issue and be removed.
-- **macOS is proven less than Linux is.** CI runs the static suite and the
+- **macOS is less proven than Linux.** CI runs the static suite and the
   browser harnesses on Linux and the static suite on Windows, on every push, and
   a full 54-source live sync daily. macOS runs the static suite on request
   rather than on every push, because a macOS runner is billed at ten times the
-  rate and the same pwsh on the same .NET has already passed on Linux. So: Linux
-  and Windows
-  are checked continuously, macOS before a release.
+  rate and the same pwsh on the same .NET has already passed on Linux. So Linux
+  and Windows are checked continuously, and macOS before a release.
 
 ---
 
 ## Sources
 
-**56 configured, 54 enabled**, across six kinds of signal. All public, none
+**56 configured, 54 enabled**, across six categories of signal. All public, none
 needing a key; each was fetched live before being admitted, and a source that
 fails keeps its last items and is shown as *stale* rather than disappearing.
 
@@ -464,8 +462,8 @@ no browser impersonation anywhere in `config/sources.json`, and a source that
 answers only a browser is treated as a source saying no: it ships disabled, with
 a `$note` saying why.
 
-Thank you to arXiv for their open access interoperability. Item metadata in the
-`research` category comes from the arXiv API and RSS feeds; arXiv is not
+Thank you to arXiv for use of its open access interoperability. Item metadata
+in the `research` category comes from the arXiv API and RSS feeds; arXiv is not
 affiliated with this project and does not endorse it.
 
 ---

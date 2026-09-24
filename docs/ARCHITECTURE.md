@@ -9,9 +9,9 @@
 
 | Owner goal | Mechanism | Where |
 |---|---|---|
-| "Not any repo is useful — highlight famous organizations" | **Publisher reputation**: a curated tier list (`config/publishers.json`) plus live GitHub org signals; a `reputation` term in the score; a *From notable organizations* rail | `lib/reputation.ps1`, `js/rank.js`, `js/ui.js` |
+| "Not any repo is useful — highlight famous organizations" | **Publisher reputation**: a curated tier list (`config/publishers.json`) plus live GitHub org signals; a `reputation` term in the score; a *From notable organisations* rail | `lib/reputation.ps1`, `js/rank.js`, `js/ui.js` |
 | "Filter by technology and by business" | **Deterministic taxonomy**: keyword rules tag every item with technologies; business verticals map to the technologies that matter for them, with one-line advice | `config/taxonomy.json`, `lib/classify.ps1`, `js/store.js` (profile) |
-| "Order by user behaviour and experience" | **Client-side personalization**: clicks, saves, hides and dwell become decayed tag/source affinities; a *For you* mode re-ranks with an explainable score; *Everything* mode keeps pure heat | `js/store.js`, `js/rank.js` |
+| "Order by user behaviour and experience" | **Client-side personalisation**: clicks, saves, hides and dwell become decayed tag/source affinities; a *For you* mode re-ranks with an explainable score; *Everything* mode keeps pure heat | `js/store.js`, `js/rank.js` |
 | "Dynamic, not static" | **Live server**: background sync process, `data/status.json` progress, `/api/status` polling; the page merges new items in place and marks *new since your last visit*; a **radar scope** visual where items are blips | `radar.ps1`, `js/live.js`, `js/scope.js` |
 | "Sources people actually go to" | Research-verified official channels of major vendors, community hubs and directories, each fetched live before being admitted | `config/sources.json`, `docs/research/` |
 

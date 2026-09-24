@@ -17,7 +17,7 @@
 - [ ] For a change under `app/js/`: `tests\run-harness.ps1` passes against a running `radar.ps1`
 - [ ] For a new source: category chosen, item count noted, rate-limiting noted
 - [ ] For a design change: `design/personality.md` updated in this commit
-- [ ] For a ranking change: the README's *How ranking works* table still matches
+- [ ] For a ranking change: the README's *How it works* heat table still matches
       `config/sources.json`
 
 ## Notes

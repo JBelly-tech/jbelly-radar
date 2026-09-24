@@ -1,6 +1,6 @@
 # Example: a small B2B SaaS with an AI assistant: what the radar already covers
 
-**2026-09-24** · JBelly Radar · matched against 2729 catalogued items (803 skills, 468 MCP servers)
+**2026-09-24** · JBelly Radar · matched against 2762 catalogued items (803 skills, 468 MCP servers)
 
 Each requirement below comes from the build section of the architecture, not
 from the radar. The radar only answers one question about it: is there already
