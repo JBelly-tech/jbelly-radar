@@ -39,3 +39,6 @@ content/matches/
 
 # demo bundles built by scripts/pack-demo.ps1, and the staged Pages site
 dist/
+
+# launch copy: for the owner to send, not part of the published project
+content/launch/
