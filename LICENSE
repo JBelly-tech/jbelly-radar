@@ -19,13 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Scope of the above: the SOFTWARE in this repository — radar.ps1, lib/, scripts/,
-app/, tests/ and the workflow files. The curated content and the observation
-record are licensed separately, under CC BY 4.0; see LICENSE-DATA for what that
-covers and why.
-
-This note is kept below the licence text rather than inside it, so that the MIT
-terms remain byte-identical and a licence detector can recognise them.
