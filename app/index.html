@@ -220,9 +220,12 @@
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
 <script>
-  // Opened from disk: load the snapshots the last sync wrote. Served: skip the
-  // 500 KB parse, the page fetches data/trends.json and config/taxonomy.json.
-  if (location.protocol === 'file:') {
+  // No API behind this page: load the snapshots the last sync wrote. That is
+  // true when opened from disk, and equally true of a published snapshot on a
+  // static host, which arrives over http and sets RADAR_STATIC to say so.
+  // Behind radar.ps1, skip the 500 KB parse: the page fetches data/trends.json
+  // and config/taxonomy.json itself.
+  if (location.protocol === 'file:' || window.RADAR_STATIC) {
     document.write('<script src="../data/taxonomy.js"><\/script><script src="../data/trends.js"><\/script>');
   }
 </script>

@@ -28,8 +28,14 @@ data/sync.lock
 # it out of this folder and commit it, because a sent claim needs a record.
 content/briefs/
 
-# demo bundles built by scripts/pack-demo.ps1 and attached to a release
-dist/
-
 # generated reports: reproducible from a plan plus the ledger
 content/matches/
+
+# content/examples/ is deliberately NOT ignored. Both features above write to
+# ignored folders, so a fresh clone showed no sign either existed — you had to
+# run them to find out what they produce. One dated sample of each is committed
+# instead. They do not go stale: a brief freezes its citations at write time, so
+# it is a record of one day, not a view that rots.
+
+# demo bundles built by scripts/pack-demo.ps1, and the staged Pages site
+dist/

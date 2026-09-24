@@ -1,0 +1,81 @@
+name: demo
+
+# Publishes the dashboard to GitHub Pages over a snapshot that is rebuilt every
+# day, so the first thing a visitor can do is look at the thing rather than
+# install it.
+#
+# It runs a real sync of all 54 sources and deploys what comes back. The page is
+# the same page the repository ships -- scripts/build-pages.ps1 copies app/ and
+# data/ without rewriting a single path -- so the demo cannot drift into being a
+# different product that merely resembles this one.
+#
+# Pages on the Free plan requires a PUBLIC repository, so the deploy step is
+# guarded on visibility. While this repository is private the build still runs
+# on demand and proves it works; only the publish waits.
+
+on:
+  schedule:
+    # 06:30 UTC, half an hour after ci.yml's source check, so a broken source is
+    # already visible in that run before this one publishes anything
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one half-done: a cancelled deploy
+# can leave the site serving a partly-written tree.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: sync and stage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Live sync
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pwsh -NoProfile -File scripts/sync.ps1
+
+      # A sync that returned almost nothing would publish an empty radar and look
+      # like the project is dead. Better to fail the build and leave yesterday's
+      # site up, which is what a failed deploy does.
+      - name: Refuse to publish a thin snapshot
+        shell: pwsh
+        run: |
+          $d = Get-Content -Raw -Encoding UTF8 data/trends.json | ConvertFrom-Json
+          $ok = @($d.sources | Where-Object { $_.status -eq 'ok' }).Count
+          Write-Host ("{0} items from {1} healthy sources" -f $d.counts.total, $ok)
+          if ($d.counts.total -lt 300) { Write-Host "::error::only $($d.counts.total) items; not publishing"; exit 1 }
+          if ($ok -lt 30) { Write-Host "::error::only $ok healthy sources; not publishing"; exit 1 }
+
+      - name: Stage the site
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/build-pages.ps1 -OutDir _site
+
+      - uses: actions/configure-pages@v5
+        if: github.event.repository.visibility == 'public'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event.repository.visibility == 'public'
+        with:
+          path: _site
+
+  deploy:
+    name: publish
+    needs: build
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -18,7 +18,9 @@ Covered by this licence
     config/sources.json       the source set and its per-source filters
     data/ledger.json          the dated record of when this radar first saw
                               each item
-    content/**                published briefs and dated calls, if present
+    content/examples/**       one dated brief and one dated plan match, kept as
+                              worked examples of what those two tools write
+    content/**                any further brief or dated call published here
     docs/research/**          the written research
 
 Licence

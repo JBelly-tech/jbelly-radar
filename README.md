@@ -14,7 +14,16 @@ It has two faces. A **dashboard** answers *what changed since yesterday and how
 much does it matter to me.* A **catalogue** answers *does something already cover
 this requirement, and does anyone actually use it.*
 
+**[Open the live demo →](https://JBelly-tech.github.io/jbelly-radar/)** — the real
+dashboard over a snapshot rebuilt daily. Nothing to install, and nothing is sent
+anywhere: personalisation lives in your own browser.
+
 ![JBelly Radar](docs/screenshot-dark.png)
+
+Two worked outputs, written by the tools below and committed as they came out:
+a [plan match](content/examples/build.example.en.md)
+([عربي](content/examples/build.example.ar.md)) and a
+[brief](content/examples/saas.en.md) ([عربي](content/examples/saas.ar.md)).
 
 ---
 

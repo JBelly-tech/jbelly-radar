@@ -21,7 +21,14 @@
   var failures = 0;
   var offline = false;
   var reloading = false;
-  var served = location.protocol.indexOf('http') === 0;
+  // `served` means "an API answers behind this page" -- which is NOT the same
+  // as "the protocol is http". A published snapshot (GitHub Pages, or any other
+  // static host) is served over http and has no API at all, and without this
+  // distinction such a page polls /api/status forever, fails three times, and
+  // tells the visitor the server is unreachable. It is not unreachable; it was
+  // never there. A static page says so by setting window.RADAR_STATIC before
+  // this script runs. file:// needs no flag: it can never be served.
+  var served = location.protocol.indexOf('http') === 0 && !window.RADAR_STATIC;
 
   // Paths are relative to app/ by contract, but the harness loads this file from
   // tests/harness/. Anchoring on the script's own URL (app/js/live.js -> root)

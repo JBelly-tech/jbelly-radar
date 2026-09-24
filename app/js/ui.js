@@ -671,7 +671,10 @@
 
   function sync() {
     if (state.busy) return;
-    if (!R.live.isServed) { toast('err', t('failT'), t('errText')); return; }
+    // The `r` shortcut reaches here even where the button is hidden. Nothing to
+    // do and nothing wrong: a snapshot has no server to ask. An error toast
+    // would report a failure that did not happen.
+    if (!R.live.isServed) { return; }
     state.busy = true;
     $('refreshBtn').disabled = true;
     $('refreshBtn').classList.add('is-busy');
@@ -705,7 +708,13 @@
 
     $('range').addEventListener('change', function (e) { state.range = parseInt(e.target.value, 10); renderFeed(); });
     $('sort').addEventListener('change', function (e) { state.sort = e.target.value; renderFeed(); });
-    $('refreshBtn').addEventListener('click', sync);
+    // Re-syncing needs radar.ps1. With no API behind the page -- opened from
+    // disk, or a published snapshot -- the control is removed rather than left
+    // to fail: offering a button and then reporting that it did not work is
+    // worse than never offering it. `sync()` keeps its own guard, because the
+    // keyboard shortcut reaches it without going through this button.
+    if (R.live.isServed) { $('refreshBtn').addEventListener('click', sync); }
+    else { $('refreshBtn').hidden = true; }
     $('profileBtn').addEventListener('click', openDrawer);
     $('drawerClose').addEventListener('click', closeDrawer);
     $('drawerBackdrop').addEventListener('click', closeDrawer);
